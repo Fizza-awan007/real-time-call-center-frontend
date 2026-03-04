@@ -30,7 +30,7 @@ const RTLogin = () => {
       return;
     }
     localStorage.setItem("access_token", "mock_token");
-    navigate("/");
+    navigate("/leadership-dashboard");
   };
 
   return (
