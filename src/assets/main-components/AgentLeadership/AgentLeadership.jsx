@@ -122,7 +122,7 @@ const StatCard = ({
 }) =>
   <div className="flex items-start justify-between rounded-xl bg-white px-6 pb-5 pt-6 shadow-[0_1px_4px_rgba(0,0,0,0.05)]">
     <div>
-      <p className="mb-1.5 font-urbanist text-[13px] text-[#45556C] ">
+      <p className="mb-1.5 font-urbanist text-[13px] font-semibold text-[#45556C]">
         {label}
       </p>
       <p className="mb-2 text-[30px] font-bold leading-[1.1] text-[#1a1d23]">
@@ -134,7 +134,7 @@ const StatCard = ({
           : "text-red-500"}`}
       >
         {change}{" "}
-        <span className="font-normal text-gray-400">vs last period</span>
+        <span className="font-[12px] text-[#62748E]">vs last period</span>
       </p>
     </div>
     <div
