@@ -7,7 +7,7 @@ function App() {
     <BrowserRouter>
       <Routes>
         <Route
-          path="/login"
+          path="/"
           element={
             <PublicRoute>
               <RTLogin />
@@ -15,13 +15,14 @@ function App() {
           }
         />
         <Route
-          path="/"
+          path="/leadership-dashboard"
           element={
             <ProtectedRoute>
               <AgentLeaderboard />
             </ProtectedRoute>
           }
         />
+        <Route path="/login" element={<Navigate to="/" replace />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>
