@@ -1,7 +1,7 @@
 import axios from "axios";
 import { getAccessToken } from "./localStorage";
 
-export const BASE_URL = import.meta.env.VITE_BACKEND_BASE_URL;
+export const BASE_URL = import.meta.env.VITE_BACKEND_URL;
 console.log("base url", BASE_URL);
 axios.defaults.baseURL = BASE_URL;
 
