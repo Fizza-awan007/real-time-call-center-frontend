@@ -10,4 +10,13 @@ export default defineConfig({
       },
     }),
   ],
+  server: {
+    proxy: {
+      '/api': {
+        target: 'https://api-testing.westlakeoc.org',
+        changeOrigin: true,
+        secure: true,
+      },
+    },
+  },
 })
