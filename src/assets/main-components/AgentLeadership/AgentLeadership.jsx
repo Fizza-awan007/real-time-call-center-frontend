@@ -262,19 +262,19 @@ const AgentLeadership = () => {
                   <th className="border-b border-gray-100 px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-[0.6px] text-[#45556C] font-urbanist sm:px-7">
                     Platform
                   </th>
-                  <th className="border-b border-gray-100 px-4 py-3 text-right text-[11px] font-semibold uppercase tracking-[0.6px] text-[#45556C] font-urbanist sm:px-7">
+                  <th className="border-b border-gray-100 px-4 py-3 text-center text-[11px] font-semibold uppercase tracking-[0.6px] text-[#45556C] font-urbanist sm:px-7">
                     Total Dials
                   </th>
-                  <th className="border-b border-gray-100 px-4 py-3 text-right text-[11px] font-semibold uppercase tracking-[0.6px] text-[#45556C] font-urbanist sm:px-7">
+                  <th className="border-b border-gray-100 px-4 py-3 text-center text-[11px] font-semibold uppercase tracking-[0.6px] text-[#45556C] font-urbanist sm:px-7">
                     Connects
                   </th>
-                  <th className="border-b border-gray-100 px-4 py-3 text-right text-[11px] font-semibold uppercase tracking-[0.6px] text-[#45556C] font-urbanist sm:px-7">
+                  <th className="border-b border-gray-100 px-4 py-3 text-center text-[11px] font-semibold uppercase tracking-[0.6px] text-[#45556C] font-urbanist sm:px-7">
                     Connect Rate
                   </th>
-                  <th className="border-b border-gray-100 px-4 py-3 text-right text-[11px] font-semibold uppercase tracking-[0.6px] text-[#45556C] font-urbanist sm:px-7">
+                  <th className="border-b border-gray-100 px-4 py-3 text-center text-[11px] font-semibold uppercase tracking-[0.6px] text-[#45556C] font-urbanist sm:px-7">
                     Avg Talk Time
                   </th>
-                  <th className="border-b border-gray-100 px-4 py-3 text-right text-[11px] font-semibold uppercase tracking-[0.6px] text-[#45556C] font-urbanist sm:px-7">
+                  <th className="border-b border-gray-100 px-4 py-3 text-center text-[11px] font-semibold uppercase tracking-[0.6px] text-[#45556C] font-urbanist sm:px-7">
                     Total Duration
                   </th>
                   {/* <th className="border-b border-gray-100 px-4 py-3 text-right text-[11px] font-semibold uppercase tracking-[0.6px] text-[#45556C] font-urbanist sm:px-7">
@@ -325,13 +325,13 @@ const AgentLeadership = () => {
                                 {agent.platform}
                               </span>
                             </td>
-                            <td className="px-4 py-4 text-right align-middle text-sm tabular-nums text-[#1a1d23] sm:px-7">
+                            <td className="px-4 py-4 text-center align-middle text-sm tabular-nums text-[#1a1d23] sm:px-7">
                               {agent.total_dials}
                             </td>
-                            <td className="px-4 py-4 text-right align-middle text-sm tabular-nums text-[#1a1d23] sm:px-7">
+                            <td className="px-4 py-4 text-center align-middle text-sm tabular-nums text-[#1a1d23] sm:px-7">
                               {agent.connects}
                             </td>
-                            <td className="px-4 py-4 text-right align-middle text-sm tabular-nums sm:px-7">
+                            <td className="px-4 py-4 text-center align-middle text-sm tabular-nums sm:px-7">
                               <span
                                 className={`font-semibold ${agent.connect_rate >= 0.8
                                   ? "text-emerald-600"
@@ -342,18 +342,18 @@ const AgentLeadership = () => {
                                 {(agent.connect_rate * 100).toFixed(1)}%
                               </span>
                             </td>
-                            <td className="px-4 py-4 text-right align-middle text-sm tabular-nums text-[#1a1d23] sm:px-7">
+                            <td className="px-4 py-4 text-center align-middle text-sm tabular-nums text-[#1a1d23] sm:px-7">
                               {formatDuration(agent.avg_talk_time)}
                             </td>
-                            <td className="px-4 py-4 text-right align-middle text-sm tabular-nums text-[#1a1d23] sm:px-7">
+                            <td className="px-4 py-4 text-center align-middle text-sm tabular-nums text-[#1a1d23] sm:px-7">
                               {formatDuration(agent.total_duration)}
                             </td>
-                            <td className="px-4 py-4 text-right align-middle text-sm tabular-nums text-[#1a1d23] sm:px-7">
+                            {/* <td className="px-4 py-4 text-right align-middle text-sm tabular-nums text-[#1a1d23] sm:px-7">
                               {agent.transfers}
                             </td>
                             <td className="px-4 py-4 text-right align-middle text-sm tabular-nums text-gray-500 sm:px-7">
                               {(agent.transfer_rate * 100).toFixed(1)}%
-                            </td>
+                            </td> */}
                           </tr>
                         );
                       })}
