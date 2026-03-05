@@ -1,106 +1,9 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { RTNavbar } from "../../common-components/index";
 
-import { CallIcon, TimeIcon, GraphIcon, GroupIcon } from "../../RTIcons";
-
-const AGENTS = [
-  {
-    id: 1,
-    name: "Sarah Johnson",
-    label: "Agent #1",
-    initials: "SJ",
-    status: "Available",
-    calls: 87,
-    avgTime: "4:12",
-    satisfaction: 4.9,
-    conversion: 78.5,
-    talkTime: "6h 05m"
-  },
-  {
-    id: 2,
-    name: "Michael Chen",
-    label: "Agent #2",
-    initials: "MC",
-    status: "On Call",
-    calls: 82,
-    avgTime: "4:35",
-    satisfaction: 4.8,
-    conversion: 75.2,
-    talkTime: "5h 52m"
-  },
-  {
-    id: 3,
-    name: "Emily Rodriguez",
-    label: "Agent #3",
-    initials: "ER",
-    status: "Available",
-    calls: 79,
-    avgTime: "4:08",
-    satisfaction: 4.9,
-    conversion: 72.8,
-    talkTime: "5h 28m"
-  },
-  {
-    id: 4,
-    name: "David Kim",
-    label: "Agent #4",
-    initials: "DK",
-    status: "Available",
-    calls: 76,
-    avgTime: "4:45",
-    satisfaction: 4.7,
-    conversion: 71.5,
-    talkTime: "5h 42m"
-  },
-  {
-    id: 5,
-    name: "Jessica Williams",
-    label: "Agent #5",
-    initials: "JW",
-    status: "On Call",
-    calls: 74,
-    avgTime: "4:22",
-    satisfaction: 4.8,
-    conversion: 69.8,
-    talkTime: "5h 21m"
-  },
-  {
-    id: 6,
-    name: "Robert Taylor",
-    label: "Agent #6",
-    initials: "RT",
-    status: "Available",
-    calls: 71,
-    avgTime: "4:38",
-    satisfaction: 4.6,
-    conversion: 68.4,
-    talkTime: "5h 12m"
-  },
-  {
-    id: 7,
-    name: "Amanda Martinez",
-    label: "Agent #7",
-    initials: "AM",
-    status: "On Call",
-    calls: 69,
-    avgTime: "4:55",
-    satisfaction: 4.7,
-    conversion: 67.2,
-    talkTime: "5h 38m"
-  },
-  {
-    id: 8,
-    name: "James Anderson",
-    label: "Agent #8",
-    initials: "JA",
-    status: "On Call",
-    calls: 67,
-    avgTime: "4:18",
-    satisfaction: 4.5,
-    conversion: 65.9,
-    talkTime: "4h 48m"
-  }
-];
+import { CallIcon, TimeIcon, GraphIcon, GroupIcon, CalenderIcon, ChaveronIcon } from "../../RTIcons";
+import { getApiWithAuth } from "../../../utils/api";
+import { STATS_API_URL, PERFORMANCE_API } from "../../../utils/apiUrls";
 
 const PERIODS = ["Today", "15 minutes", "60 minutes"];
 
@@ -116,8 +19,8 @@ const StatCard = ({
   label,
   value,
   icon,
-  change,
-  changePositive,
+  // change,
+  // changePositive,
   iconBgClass = "bg-[#f5f6fa]"
 }) =>
   <div className="flex items-start justify-between rounded-xl bg-white px-6 pb-5 pt-6 shadow-[0_1px_4px_rgba(0,0,0,0.05)]">
@@ -128,14 +31,14 @@ const StatCard = ({
       <p className="mb-2 text-[30px] font-bold leading-[1.1] text-[#1a1d23]">
         {value}
       </p>
-      <p
+      {/* <p
         className={`text-xs font-semibold ${changePositive
           ? "text-emerald-500"
           : "text-red-500"}`}
       >
         {change}{" "}
         <span className="font-[12px] text-[#62748E]">vs last period</span>
-      </p>
+      </p> */}
     </div>
     <div
       className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl ${iconBgClass}`}
@@ -144,16 +47,67 @@ const StatCard = ({
     </div>
   </div>;
 
+const formatDuration = (seconds) => {
+  const m = Math.floor(seconds / 60);
+  const s = Math.round(seconds % 60);
+  return `${m}:${s.toString().padStart(2, "0")}`;
+};
+
 const AgentLeadership = () => {
   const [period, setPeriod] = useState("Today");
   const [search, setSearch] = useState("");
   const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [stats, setStats] = useState(null);
 
-  const filtered = AGENTS.filter(
-    a =>
-      a.name.toLowerCase().includes(search.toLowerCase()) ||
-      a.label.toLowerCase().includes(search.toLowerCase())
+  const [agents, setAgents] = useState([]);
+  const [pagination, setPagination] = useState(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [loadingAgents, setLoadingAgents] = useState(false);
+
+  useEffect(() => {
+    const fetchStats = async () => {
+      const res = await getApiWithAuth(STATS_API_URL);
+      if (res.success) {
+        setStats(res.data);
+      }
+    };
+    fetchStats();
+  }, []);
+
+  useEffect(() => {
+    const fetchAgents = async () => {
+      setLoadingAgents(true);
+      const res = await getApiWithAuth(`${PERFORMANCE_API}?page=${currentPage}`);
+      if (res.success && res.data?.data) {
+        setAgents(res.data.data);
+        setPagination(res.data.pagination);
+      }
+      setLoadingAgents(false);
+    };
+    fetchAgents();
+  }, [currentPage]);
+
+  const filtered = agents.filter(a =>
+    a.caller_id?.toLowerCase().includes(search.toLowerCase()) ||
+    a.platform?.toLowerCase().includes(search.toLowerCase())
   );
+
+  const totalPages = pagination?.totalPages ?? 1;
+
+  const getPageNumbers = () => {
+    const pages = [];
+    const delta = 2;
+    const left = Math.max(2, currentPage - delta);
+    const right = Math.min(totalPages - 1, currentPage + delta);
+
+    pages.push(1);
+    if (left > 2) pages.push("...");
+    for (let i = left; i <= right; i++) pages.push(i);
+    if (right < totalPages - 1) pages.push("...");
+    if (totalPages > 1) pages.push(totalPages);
+
+    return pages;
+  };
 
   return (
     <div className="min-h-screen bg-[#f5f6fa]">
@@ -164,28 +118,14 @@ const AgentLeadership = () => {
             Agent Leaderboard
           </h1>
           <div className="flex items-center gap-2 text-[13px] text-gray-500">
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-              <rect
-                x="1"
-                y="2"
-                width="14"
-                height="13"
-                rx="2"
-                stroke="#6b7280"
-                strokeWidth="1.4"
-              />
-              <path
-                d="M5 1v2M11 1v2M1 6h14"
-                stroke="#6b7280"
-                strokeWidth="1.4"
-                strokeLinecap="round"
-              />
-            </svg>
+           
+            <CalenderIcon width={15} height={15}/>
+          
             <span className="font-medium text-gray-700">Period:</span>
             <div className="relative">
               <button
                 type="button"
-                className="flex h-9 items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3.5 text-[13px] font-medium text-gray-700 transition-colors hover:border-gray-300"
+                className="flex h-9 w-[120px] items-center justify-between gap-1.5 rounded-lg border border-gray-200 bg-white px-3.5 text-[13px] font-medium text-gray-700 transition-colors hover:border-gray-300"
                 onClick={() => setDropdownOpen(o => !o)}
               >
                 {period}
@@ -198,9 +138,11 @@ const AgentLeadership = () => {
                     strokeLinejoin="round"
                   />
                 </svg>
+
+
               </button>
               {dropdownOpen &&
-                <div className="absolute right-0 top-[calc(100%+4px)] z-50 min-w-[130px] overflow-hidden rounded-lg border border-gray-200 bg-white shadow-[0_4px_16px_rgba(0,0,0,0.1)]">
+                <div className="absolute right-0 top-[calc(100%+4px)] z-50 w-full overflow-hidden rounded-lg border border-gray-200 bg-white shadow-[0_4px_16px_rgba(0,0,0,0.1)]">
                   {PERIODS.map(p =>
                     <button
                       key={p}
@@ -225,15 +167,15 @@ const AgentLeadership = () => {
         <div className="mb-7 grid gap-5 sm:grid-cols-2 xl:grid-cols-4">
           <StatCard
             label="Total Calls"
-            value="1,247"
+            value={stats ? stats.total_calls.toLocaleString() : "—"}
             change="+12.5%"
             changePositive
             iconBgClass="bg-blue-50"
             icon={<CallIcon width={28} height={28} className="text-blue-500" />}
           />
           <StatCard
-            label="Avg Handle Time"
-            value="4:32"
+            label="Distinct Agents"
+            value={stats ? stats.distinct_agents.toLocaleString() : "—"}
             change="-8.2%"
             changePositive={false}
             iconBgClass="bg-emerald-50"
@@ -242,8 +184,8 @@ const AgentLeadership = () => {
             }
           />
           <StatCard
-            label="Conversion Rate"
-            value="68.4%"
+            label="Avg Calls / Agent"
+            value={stats ? stats.avg_calls_per_agent.toLocaleString() : "—"}
             change="+5.1%"
             changePositive
             iconBgClass="bg-purple-50"
@@ -252,8 +194,8 @@ const AgentLeadership = () => {
             }
           />
           <StatCard
-            label="Active Agents"
-            value="24"
+            label="Active Campaigns"
+            value={stats ? stats.distinct_campaigns : "—"}
             change="+2"
             changePositive
             iconBgClass="bg-orange-50"
@@ -270,7 +212,9 @@ const AgentLeadership = () => {
                 Performance Rankings
               </h1>
               <p className="text-[14px] text-[#45556C] font-urbanist">
-                Showing {filtered.length} agents
+                {pagination
+                  ? `Showing ${(currentPage - 1) * pagination.pageSize + 1}–${Math.min(currentPage * pagination.pageSize, pagination.totalCount)} of ${pagination.totalCount.toLocaleString()} records`
+                  : `Showing ${filtered.length} agents`}
               </p>
             </div>
             <div className="relative flex items-center">
@@ -298,7 +242,7 @@ const AgentLeadership = () => {
               <input
                 className="h-[38px] w-full rounded-[20px] border border-gray-200 bg-gray-50 px-3.5 pl-9 text-[13px] text-[#1a1d23] outline-none transition-colors placeholder:text-gray-400 focus:border-indigo-500 focus:bg-white md:w-[220px]"
                 type="text"
-                placeholder="Search agents..."
+                placeholder="Search caller ID..."
                 value={search}
                 onChange={e => setSearch(e.target.value)}
               />
@@ -309,90 +253,175 @@ const AgentLeadership = () => {
             <table className="w-full border-collapse">
               <thead>
                 <tr>
-                  <th className="w-20 border-b border-gray-100 px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-[0.6px] text-[#45556C] font-urbanist sm:px-7">
-                    Rank
-                  </th>
-                  <th className="w-[260px] border-b border-gray-100 px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-[0.6px]text-[#45556C] font-urbanist sm:px-7">
-                    Agent
+                  <th className="w-16 border-b border-gray-100 px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-[0.6px] text-[#45556C] font-urbanist sm:px-7">
+                    #
                   </th>
                   <th className="border-b border-gray-100 px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-[0.6px] text-[#45556C] font-urbanist sm:px-7">
-                    Status
+                    Caller ID
+                  </th>
+                  <th className="border-b border-gray-100 px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-[0.6px] text-[#45556C] font-urbanist sm:px-7">
+                    Platform
                   </th>
                   <th className="border-b border-gray-100 px-4 py-3 text-right text-[11px] font-semibold uppercase tracking-[0.6px] text-[#45556C] font-urbanist sm:px-7">
-                    Calls
+                    Total Dials
                   </th>
                   <th className="border-b border-gray-100 px-4 py-3 text-right text-[11px] font-semibold uppercase tracking-[0.6px] text-[#45556C] font-urbanist sm:px-7">
-                    Avg Time
+                    Connects
                   </th>
                   <th className="border-b border-gray-100 px-4 py-3 text-right text-[11px] font-semibold uppercase tracking-[0.6px] text-[#45556C] font-urbanist sm:px-7">
-                    Satisfaction
+                    Connect Rate
                   </th>
                   <th className="border-b border-gray-100 px-4 py-3 text-right text-[11px] font-semibold uppercase tracking-[0.6px] text-[#45556C] font-urbanist sm:px-7">
-                    Conversion
+                    Avg Talk Time
                   </th>
                   <th className="border-b border-gray-100 px-4 py-3 text-right text-[11px] font-semibold uppercase tracking-[0.6px] text-[#45556C] font-urbanist sm:px-7">
-                    Talk Time
+                    Total Duration
+                  </th>
+                  <th className="border-b border-gray-100 px-4 py-3 text-right text-[11px] font-semibold uppercase tracking-[0.6px] text-[#45556C] font-urbanist sm:px-7">
+                    Transfers
+                  </th>
+                  <th className="border-b border-gray-100 px-4 py-3 text-right text-[11px] font-semibold uppercase tracking-[0.6px] text-[#45556C] font-urbanist sm:px-7">
+                    Transfer Rate
                   </th>
                 </tr>
               </thead>
               <tbody>
-                {filtered.map((agent, idx) =>
-                  <tr
-                    key={agent.id}
-                    className="border-b border-gray-50 transition-colors last:border-b-0 hover:bg-gray-50/60"
-                  >
-                    <td className="w-20 px-4 py-4 align-middle text-sm text-[#1a1d23] sm:px-7">
-                      <MedalIcon rank={idx + 1} />
-                    </td>
-                    <td className="w-[260px] px-4 py-4 align-middle text-sm text-[#1a1d23] sm:px-7">
-                      <div className="flex items-center gap-3">
-                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gray-200 text-xs font-semibold text-gray-700">
-                          {agent.initials}
-                        </div>
-                        <div>
-                          <p className="mb-px text-sm font-semibold text-[#1a1d23]">
-                            {agent.name}
-                          </p>
-                          <p className="text-xs text-gray-400">
-                            {agent.label}
-                          </p>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-4 py-4 align-middle text-sm text-[#1a1d23] sm:px-7">
-                      <span className="inline-flex items-center gap-1.5 text-[13px] font-medium text-[#5C6E91]">
-                        <span
-                          className={`h-2 w-2 shrink-0 rounded-full ${agent.status ===
-                          "Available"
-                            ? "bg-emerald-500"
-                            : "bg-orange-500"}`}
-                        />
-                        {agent.status}
-                      </span>
-                    </td>
-                    <td className="px-4 py-4 text-right align-middle text-sm tabular-nums text-[#1a1d23] sm:px-7">
-                      {agent.calls}
-                    </td>
-                    <td className="px-4 py-4 text-right align-middle text-sm tabular-nums text-[#1a1d23] sm:px-7">
-                      {agent.avgTime}
-                    </td>
-                    <td className="px-4 py-4 text-right align-middle text-sm tabular-nums text-[#1a1d23] sm:px-7">
-                      {agent.satisfaction}
-                      <span className="text-[11px] font-normal text-gray-400">
-                        /5
-                      </span>
-                    </td>
-                    <td className="px-4 py-4 text-right align-middle text-sm tabular-nums text-[#1a1d23] sm:px-7">
-                      {agent.conversion}%
-                    </td>
-                    <td className="px-4 py-4 text-right align-middle text-sm tabular-nums text-gray-500 sm:px-7">
-                      {agent.talkTime}
-                    </td>
-                  </tr>
-                )}
+                {loadingAgents
+                  ? <tr>
+                      <td
+                        colSpan={10}
+                        className="py-16 text-center text-sm text-gray-400"
+                      >
+                        Loading...
+                      </td>
+                    </tr>
+                  : filtered.length === 0
+                    ? <tr>
+                        <td
+                          colSpan={10}
+                          className="py-16 text-center text-sm text-gray-400"
+                        >
+                          No results found.
+                        </td>
+                      </tr>
+                    : filtered.map((agent, idx) => {
+                        const globalRank =
+                          (currentPage - 1) * (pagination?.pageSize ?? 100) +
+                          idx +
+                          1;
+                        return (
+                          <tr
+                            key={`${agent.caller_id}-${idx}`}
+                            className="border-b border-gray-50 transition-colors last:border-b-0 hover:bg-gray-50/60"
+                          >
+                            <td className="px-4 py-4 align-middle text-sm text-[#1a1d23] sm:px-7">
+                              <MedalIcon rank={globalRank} />
+                            </td>
+                            <td className="px-4 py-4 align-middle text-sm font-semibold text-[#1a1d23] sm:px-7">
+                              {agent.caller_id}
+                            </td>
+                            <td className="px-4 py-4 align-middle text-sm sm:px-7">
+                              <span className="inline-flex items-center rounded-full bg-indigo-50 px-2.5 py-0.5 text-[12px] font-medium text-indigo-600 capitalize">
+                                {agent.platform}
+                              </span>
+                            </td>
+                            <td className="px-4 py-4 text-right align-middle text-sm tabular-nums text-[#1a1d23] sm:px-7">
+                              {agent.total_dials}
+                            </td>
+                            <td className="px-4 py-4 text-right align-middle text-sm tabular-nums text-[#1a1d23] sm:px-7">
+                              {agent.connects}
+                            </td>
+                            <td className="px-4 py-4 text-right align-middle text-sm tabular-nums sm:px-7">
+                              <span
+                                className={`font-semibold ${agent.connect_rate >= 0.8
+                                  ? "text-emerald-600"
+                                  : agent.connect_rate >= 0.5
+                                    ? "text-amber-500"
+                                    : "text-red-500"}`}
+                              >
+                                {(agent.connect_rate * 100).toFixed(1)}%
+                              </span>
+                            </td>
+                            <td className="px-4 py-4 text-right align-middle text-sm tabular-nums text-[#1a1d23] sm:px-7">
+                              {formatDuration(agent.avg_talk_time)}
+                            </td>
+                            <td className="px-4 py-4 text-right align-middle text-sm tabular-nums text-[#1a1d23] sm:px-7">
+                              {formatDuration(agent.total_duration)}
+                            </td>
+                            <td className="px-4 py-4 text-right align-middle text-sm tabular-nums text-[#1a1d23] sm:px-7">
+                              {agent.transfers}
+                            </td>
+                            <td className="px-4 py-4 text-right align-middle text-sm tabular-nums text-gray-500 sm:px-7">
+                              {(agent.transfer_rate * 100).toFixed(1)}%
+                            </td>
+                          </tr>
+                        );
+                      })}
               </tbody>
             </table>
           </div>
+
+          {pagination && totalPages > 1 &&
+            <div className="flex items-center justify-between border-t border-gray-100 px-4 py-4 sm:px-7">
+              <p className="text-[13px] text-[#62748E]">
+                Page {currentPage} of {totalPages.toLocaleString()}
+              </p>
+              <div className="flex items-center gap-1">
+                <button
+                  type="button"
+                  disabled={!pagination.hasPrev}
+                  onClick={() => setCurrentPage(p => p - 1)}
+                  className="flex h-8 w-8 items-center justify-center rounded-lg border border-gray-200 text-gray-500 transition-colors hover:border-gray-300 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                    <path
+                      d="M9 11L5 7L9 3"
+                      stroke="currentColor"
+                      strokeWidth="1.5"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
+                </button>
+
+                {getPageNumbers().map((page, i) =>
+                  page === "..."
+                    ? <span
+                        key={`ellipsis-${i}`}
+                        className="flex h-8 w-8 items-center justify-center text-[13px] text-gray-400"
+                      >
+                        …
+                      </span>
+                    : <button
+                        key={page}
+                        type="button"
+                        onClick={() => setCurrentPage(page)}
+                        className={`flex h-8 w-8 items-center justify-center rounded-lg text-[13px] font-medium transition-colors ${currentPage === page
+                          ? "bg-indigo-500 text-white"
+                          : "border border-gray-200 text-gray-600 hover:border-gray-300 hover:bg-gray-50"}`}
+                      >
+                        {page}
+                      </button>
+                )}
+
+                <button
+                  type="button"
+                  disabled={!pagination.hasNext}
+                  onClick={() => setCurrentPage(p => p + 1)}
+                  className="flex h-8 w-8 items-center justify-center rounded-lg border border-gray-200 text-gray-500 transition-colors hover:border-gray-300 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                    <path
+                      d="M5 3L9 7L5 11"
+                      stroke="currentColor"
+                      strokeWidth="1.5"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
+                </button>
+              </div>
+            </div>}
         </div>
       </main>
     </div>
