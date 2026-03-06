@@ -53,11 +53,14 @@ const formatDuration = (seconds) => {
   return `${m}:${s.toString().padStart(2, "0")}`;
 };
 
+
 const AgentLeadership = () => {
   const [period, setPeriod] = useState("Today");
   const [search, setSearch] = useState("");
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [stats, setStats] = useState(null);
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
 
   const [agents, setAgents] = useState([]);
   const [pagination, setPagination] = useState(null);
@@ -77,7 +80,14 @@ const AgentLeadership = () => {
   useEffect(() => {
     const fetchAgents = async () => {
       setLoadingAgents(true);
-      const res = await getApiWithAuth(`${PERFORMANCE_API}?page=${currentPage}`);
+      const params = new URLSearchParams({ page: String(currentPage) });
+
+      if (dateTo) {
+        if (dateFrom) params.set("dateFrom", dateFrom);
+        params.set("dateTo", dateTo);
+      }
+
+      const res = await getApiWithAuth(`${PERFORMANCE_API}?${params.toString()}`);
       if (res.success && res.data?.data) {
         setAgents(res.data.data);
         setPagination(res.data.pagination);
@@ -85,7 +95,7 @@ const AgentLeadership = () => {
       setLoadingAgents(false);
     };
     fetchAgents();
-  }, [currentPage]);
+  }, [currentPage, dateFrom, dateTo]);
 
   const filtered = agents.filter(a =>
     a.caller_id?.toLowerCase().includes(search.toLowerCase()) ||
@@ -206,8 +216,8 @@ const AgentLeadership = () => {
         </div>
 
         <div className="overflow-hidden rounded-xl bg-white shadow-[0_1px_4px_rgba(0,0,0,0.05)]">
-          <div className="flex flex-col gap-4 border-b border-gray-100 px-4 pb-5 pt-6 sm:px-7 md:flex-row md:items-center md:justify-between">
-            <div>
+          <div className="border-b border-gray-100 px-4 pb-5 pt-6 sm:px-7">
+            <div className="mb-4">
               <h1 className="font-urbanist text-[24px] font-semibold leading-[150%] text-[#1a1d23]">
                 Performance Rankings
               </h1>
@@ -217,35 +227,77 @@ const AgentLeadership = () => {
                   : `Showing ${filtered.length} agents`}
               </p>
             </div>
-            <div className="relative flex items-center">
-              <svg
-                className="pointer-events-none absolute left-3"
-                width="16"
-                height="16"
-                viewBox="0 0 16 16"
-                fill="none"
-              >
-                <circle
-                  cx="6.5"
-                  cy="6.5"
-                  r="5"
-                  stroke="#9ca3af"
-                  strokeWidth="1.4"
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex flex-wrap items-center gap-3">
+                <div className="flex items-center gap-2">
+                  <label
+                    htmlFor="date-from"
+                    className="text-[13px] font-medium text-gray-700"
+                  >
+                    From
+                  </label>
+                  <input
+                    id="date-from"
+                    type="date"
+                    value={dateFrom}
+                    max={dateTo || undefined}
+                    onChange={e => {
+                      setDateFrom(e.target.value);
+                      setCurrentPage(1);
+                    }}
+                    className="h-[38px] rounded-lg border border-gray-200 bg-white px-3 text-[13px] text-[#1a1d23] outline-none transition-colors focus:border-indigo-500"
+                  />
+                </div>
+                <div className="flex items-center gap-2">
+                  <label
+                    htmlFor="date-to"
+                    className="text-[13px] font-medium text-gray-700"
+                  >
+                    To
+                  </label>
+                  <input
+                    id="date-to"
+                    type="date"
+                    value={dateTo}
+                    min={dateFrom || undefined}
+                    onChange={e => {
+                      setDateTo(e.target.value);
+                      setCurrentPage(1);
+                    }}
+                    className="h-[38px] rounded-lg border border-gray-200 bg-white px-3 text-[13px] text-[#1a1d23] outline-none transition-colors focus:border-indigo-500"
+                  />
+                </div>
+              </div>
+              <div className="relative flex items-center">
+                <svg
+                  className="pointer-events-none absolute left-3"
+                  width="16"
+                  height="16"
+                  viewBox="0 0 16 16"
+                  fill="none"
+                >
+                  <circle
+                    cx="6.5"
+                    cy="6.5"
+                    r="5"
+                    stroke="#9ca3af"
+                    strokeWidth="1.4"
+                  />
+                  <path
+                    d="M10.5 10.5L14 14"
+                    stroke="#9ca3af"
+                    strokeWidth="1.4"
+                    strokeLinecap="round"
+                  />
+                </svg>
+                <input
+                  className="h-[38px] w-full rounded-[20px] border border-gray-200 bg-gray-50 px-3.5 pl-9 text-[13px] text-[#1a1d23] outline-none transition-colors placeholder:text-gray-400 focus:border-indigo-500 focus:bg-white sm:w-[220px]"
+                  type="text"
+                  placeholder="Search caller ID..."
+                  value={search}
+                  onChange={e => setSearch(e.target.value)}
                 />
-                <path
-                  d="M10.5 10.5L14 14"
-                  stroke="#9ca3af"
-                  strokeWidth="1.4"
-                  strokeLinecap="round"
-                />
-              </svg>
-              <input
-                className="h-[38px] w-full rounded-[20px] border border-gray-200 bg-gray-50 px-3.5 pl-9 text-[13px] text-[#1a1d23] outline-none transition-colors placeholder:text-gray-400 focus:border-indigo-500 focus:bg-white md:w-[220px]"
-                type="text"
-                placeholder="Search caller ID..."
-                value={search}
-                onChange={e => setSearch(e.target.value)}
-              />
+              </div>
             </div>
           </div>
 
