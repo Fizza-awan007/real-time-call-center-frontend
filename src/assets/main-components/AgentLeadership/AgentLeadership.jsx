@@ -323,9 +323,9 @@ const AgentLeadership = () => {
                   <th className="border-b border-gray-100 px-4 py-3 text-center text-[11px] font-semibold uppercase tracking-[0.6px] text-[#45556C] font-urbanist sm:px-7">
                     Avg Duration
                   </th>
-                  <th className="border-b border-gray-100 px-4 py-3 text-center text-[11px] font-semibold uppercase tracking-[0.6px] text-[#45556C] font-urbanist sm:px-7">
+                  {/* <th className="border-b border-gray-100 px-4 py-3 text-center text-[11px] font-semibold uppercase tracking-[0.6px] text-[#45556C] font-urbanist sm:px-7">
                     Total Duration
-                  </th>
+                  </th> */}
                   <th className="border-b border-gray-100 px-4 py-3 text-right text-[11px] font-semibold uppercase tracking-[0.6px] text-[#45556C] font-urbanist sm:px-7">
                     Transfers
                   </th>
@@ -338,7 +338,7 @@ const AgentLeadership = () => {
                 {loadingAgents
                   ? <tr>
                       <td
-                        colSpan={10}
+                        colSpan={9}
                         className="py-16 text-center text-sm text-gray-400"
                       >
                         Loading...
@@ -347,7 +347,7 @@ const AgentLeadership = () => {
                   : filtered.length === 0
                     ? <tr>
                         <td
-                          colSpan={10}
+                          colSpan={9}
                           className="py-16 text-center text-sm text-gray-400"
                         >
                           No results found.
@@ -394,9 +394,9 @@ const AgentLeadership = () => {
                             <td className="px-4 py-4 text-center align-middle text-sm tabular-nums text-[#1a1d23] sm:px-7">
                               {formatDuration(agent.avg_duration)}
                             </td>
-                            <td className="px-4 py-4 text-center align-middle text-sm tabular-nums text-[#1a1d23] sm:px-7">
+                            {/* <td className="px-4 py-4 text-center align-middle text-sm tabular-nums text-[#1a1d23] sm:px-7">
                               {formatDuration(agent.total_duration)}
-                            </td>
+                            </td> */}
                             <td className="px-4 py-4 text-right align-middle text-sm tabular-nums text-[#1a1d23] sm:px-7">
                               {agent.transfers}
                             </td>
