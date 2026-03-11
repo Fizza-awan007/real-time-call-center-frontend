@@ -1,5 +1,7 @@
+import { NavLink } from "react-router-dom";
 import Avatar from "../../RTIcons/Avatar";
 import LogoIcon from "../../RTIcons/Logo";
+
 const RTNavbar = ({
   userName,
   userRole = "Admin",
@@ -35,13 +37,39 @@ const RTNavbar = ({
   const resolvedUserName = userName?.trim() || getStoredUserName() || "Chris Miguel";
 
   return (
-    <header className="sticky top-0 z-50 flex h-[60px] items-center justify-between bg-[#FFFFFF] px-4 sm:px-8">
+    <header className="sticky top-0 z-50 flex h-[60px] items-center justify-between bg-[#FFFFFF] px-4 sm:px-8 shadow-[0_1px_0_rgba(0,0,0,0.06)]">
       <div className="flex items-center gap-2.5">
         <div className="flex items-center">
           <LogoIcon className="h-5 w-5 text-white" />
         </div>
-       
       </div>
+
+      <nav className="absolute left-1/2 -translate-x-1/2 flex items-center gap-1">
+        <NavLink
+          to="/home"
+          className={({ isActive }) =>
+            `px-4 py-1.5 rounded-lg text-[14px] font-medium transition-colors ${
+              isActive
+                ? "bg-indigo-50 text-indigo-600"
+                : "text-[#62748E] hover:text-[#1a1d23] hover:bg-gray-100"
+            }`
+          }
+        >
+          Dashboard
+        </NavLink>
+        <NavLink
+          to="/upload"
+          className={({ isActive }) =>
+            `px-4 py-1.5 rounded-lg text-[14px] font-medium transition-colors ${
+              isActive
+                ? "bg-indigo-50 text-indigo-600"
+                : "text-[#62748E] hover:text-[#1a1d23] hover:bg-gray-100"
+            }`
+          }
+        >
+          Upload File
+        </NavLink>
+      </nav>
 
       <div className="flex items-center gap-2.5">
         <div className="h-10 w-10 shrink-0 overflow-hidden rounded-full">

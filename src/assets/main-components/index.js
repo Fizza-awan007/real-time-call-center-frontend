@@ -1,3 +1,4 @@
 import RTLogin from "./RTLogin/RTLogin";
 import AgentLeaderboard from "./AgentLeadership/AgentLeadership";
-export { RTLogin, AgentLeaderboard };
+import UploadFile from "./UploadFile/UploadFile";
+export { RTLogin, AgentLeaderboard, UploadFile };
