@@ -203,7 +203,7 @@ const AgentLeadership = () => {
             }
           />
           <StatCard
-            label="Avg Duration (min)"
+            label="Avg Duration (sec)"
             value={stats ? stats.avg_duration : "—"}
             iconBgClass="bg-orange-50"
             icon={
