@@ -1,9 +1,10 @@
 import { useState, useEffect } from "react";
+import toast from "react-hot-toast";
 import { RTNavbar } from "../../common-components/index";
 
 import { CallIcon, TimeIcon, GraphIcon, GroupIcon, CalenderIcon, ChaveronIcon } from "../../RTIcons";
 import { getApiWithAuth } from "../../../utils/api";
-import { STATS_API_URL, PERFORMANCE_API } from "../../../utils/apiUrls";
+import { POOL_DASHBOARD_SUMMARY, POOL_DASHBOARD_LIST } from "../../../utils/apiUrls";
 
 const PERIODS = ["Today", "15 minutes", "60 minutes"];
 
@@ -69,9 +70,11 @@ const AgentLeadership = () => {
 
   useEffect(() => {
     const fetchStats = async () => {
-      const res = await getApiWithAuth(STATS_API_URL);
-      if (res.success) {
-        setStats(res.data);
+      const res = await getApiWithAuth(POOL_DASHBOARD_SUMMARY);
+      if (res.success && res.data?.summary) {
+        setStats(res.data.summary);
+      } else if (!res.success && !res.redirecting) {
+        toast.error(res.data?.error || res.data?.message || "Failed to load summary.");
       }
     };
     fetchStats();
@@ -80,17 +83,19 @@ const AgentLeadership = () => {
   useEffect(() => {
     const fetchAgents = async () => {
       setLoadingAgents(true);
-      const params = new URLSearchParams({ page: String(currentPage) });
+      const params = new URLSearchParams({ page: String(currentPage), limit: "50" });
 
       if (dateTo) {
         if (dateFrom) params.set("dateFrom", dateFrom);
         params.set("dateTo", dateTo);
       }
 
-      const res = await getApiWithAuth(`${PERFORMANCE_API}?${params.toString()}`);
+      const res = await getApiWithAuth(`${POOL_DASHBOARD_LIST}?${params.toString()}`);
       if (res.success && res.data?.data) {
         setAgents(res.data.data);
-        setPagination(res.data.pagination);
+        setPagination({ totalCount: res.data.total, pageSize: res.data.limit, totalPages: Math.ceil(res.data.total / res.data.limit), hasPrev: res.data.page > 1, hasNext: res.data.page < Math.ceil(res.data.total / res.data.limit) });
+      } else if (!res.success && !res.redirecting) {
+        toast.error(res.data?.error || res.data?.message || "Failed to load dashboard data.");
       }
       setLoadingAgents(false);
     };
@@ -98,7 +103,7 @@ const AgentLeadership = () => {
   }, [currentPage, dateFrom, dateTo]);
 
   const filtered = agents.filter(a =>
-    a.caller_id?.toLowerCase().includes(search.toLowerCase()) ||
+    a.pool_name?.toLowerCase().includes(search.toLowerCase()) ||
     a.platform?.toLowerCase().includes(search.toLowerCase())
   );
 
@@ -176,38 +181,30 @@ const AgentLeadership = () => {
 
         <div className="mb-7 grid gap-5 sm:grid-cols-2 xl:grid-cols-4">
           <StatCard
-            label="Total Calls"
-            value={stats ? stats.total_calls.toLocaleString() : "—"}
-            change="+12.5%"
-            changePositive
+            label="Total Dials"
+            value={stats ? stats.total_dials.toLocaleString() : "—"}
             iconBgClass="bg-blue-50"
             icon={<CallIcon width={28} height={28} className="text-blue-500" />}
           />
           <StatCard
-            label="Distinct Agents"
-            value={stats ? stats.distinct_agents.toLocaleString() : "—"}
-            change="-8.2%"
-            changePositive={false}
+            label="Connects"
+            value={stats ? stats.connects.toLocaleString() : "—"}
             iconBgClass="bg-emerald-50"
             icon={
               <TimeIcon width={28} height={28} className="text-emerald-500" />
             }
           />
           <StatCard
-            label="Avg Calls / Agent"
-            value={stats ? stats.avg_calls_per_agent.toLocaleString() : "—"}
-            change="+5.1%"
-            changePositive
+            label="Connect Rate"
+            value={stats ? `${stats.connect_rate}%` : "—"}
             iconBgClass="bg-purple-50"
             icon={
               <GraphIcon width={28} height={28} className="text-purple-500" />
             }
           />
           <StatCard
-            label="Active Campaigns"
-            value={stats ? stats.distinct_campaigns : "—"}
-            change="+2"
-            changePositive
+            label="Avg Duration (min)"
+            value={stats ? stats.avg_duration : "—"}
             iconBgClass="bg-orange-50"
             icon={
               <GroupIcon width={28} height={28} className="text-orange-500" />
@@ -293,7 +290,7 @@ const AgentLeadership = () => {
                 <input
                   className="h-[38px] w-full rounded-[20px] border border-gray-200 bg-gray-50 px-3.5 pl-9 text-[13px] text-[#1a1d23] outline-none transition-colors placeholder:text-gray-400 focus:border-indigo-500 focus:bg-white sm:w-[220px]"
                   type="text"
-                  placeholder="Search caller ID..."
+                  placeholder="Search pool name..."
                   value={search}
                   onChange={e => setSearch(e.target.value)}
                 />
@@ -309,7 +306,7 @@ const AgentLeadership = () => {
                     #
                   </th>
                   <th className="border-b border-gray-100 px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-[0.6px] text-[#45556C] font-urbanist sm:px-7">
-                    Caller ID
+                    Pool Name
                   </th>
                   <th className="border-b border-gray-100 px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-[0.6px] text-[#45556C] font-urbanist sm:px-7">
                     Platform
@@ -324,17 +321,17 @@ const AgentLeadership = () => {
                     Connect Rate
                   </th>
                   <th className="border-b border-gray-100 px-4 py-3 text-center text-[11px] font-semibold uppercase tracking-[0.6px] text-[#45556C] font-urbanist sm:px-7">
-                    Avg Talk Time
+                    Avg Duration
                   </th>
                   <th className="border-b border-gray-100 px-4 py-3 text-center text-[11px] font-semibold uppercase tracking-[0.6px] text-[#45556C] font-urbanist sm:px-7">
                     Total Duration
                   </th>
-                  {/* <th className="border-b border-gray-100 px-4 py-3 text-right text-[11px] font-semibold uppercase tracking-[0.6px] text-[#45556C] font-urbanist sm:px-7">
+                  <th className="border-b border-gray-100 px-4 py-3 text-right text-[11px] font-semibold uppercase tracking-[0.6px] text-[#45556C] font-urbanist sm:px-7">
                     Transfers
                   </th>
                   <th className="border-b border-gray-100 px-4 py-3 text-right text-[11px] font-semibold uppercase tracking-[0.6px] text-[#45556C] font-urbanist sm:px-7">
                     Transfer Rate
-                  </th> */}
+                  </th>
                 </tr>
               </thead>
               <tbody>
@@ -363,14 +360,14 @@ const AgentLeadership = () => {
                           1;
                         return (
                           <tr
-                            key={`${agent.caller_id}-${idx}`}
+                            key={agent._id}
                             className="border-b border-gray-50 transition-colors last:border-b-0 hover:bg-gray-50/60"
                           >
                             <td className="px-4 py-4 align-middle text-sm text-[#1a1d23] sm:px-7">
                               <MedalIcon rank={globalRank} />
                             </td>
                             <td className="px-4 py-4 align-middle text-sm font-semibold text-[#1a1d23] sm:px-7">
-                              {agent.caller_id}
+                              {agent.pool_name}
                             </td>
                             <td className="px-4 py-4 align-middle text-sm sm:px-7">
                               <span className="inline-flex items-center rounded-full bg-indigo-50 px-2.5 py-0.5 text-[12px] font-medium text-indigo-600 capitalize">
@@ -378,34 +375,34 @@ const AgentLeadership = () => {
                               </span>
                             </td>
                             <td className="px-4 py-4 text-center align-middle text-sm tabular-nums text-[#1a1d23] sm:px-7">
-                              {agent.total_dials}
+                              {agent.total_dials?.toLocaleString()}
                             </td>
                             <td className="px-4 py-4 text-center align-middle text-sm tabular-nums text-[#1a1d23] sm:px-7">
-                              {agent.connects}
+                              {agent.connects?.toLocaleString()}
                             </td>
                             <td className="px-4 py-4 text-center align-middle text-sm tabular-nums sm:px-7">
                               <span
-                                className={`font-semibold ${agent.connect_rate >= 0.8
+                                className={`font-semibold ${agent.connect_rate >= 80
                                   ? "text-emerald-600"
-                                  : agent.connect_rate >= 0.5
+                                  : agent.connect_rate >= 50
                                     ? "text-amber-500"
                                     : "text-red-500"}`}
                               >
-                                {(agent.connect_rate * 100).toFixed(1)}%
+                                {agent.connect_rate?.toFixed(1)}%
                               </span>
                             </td>
                             <td className="px-4 py-4 text-center align-middle text-sm tabular-nums text-[#1a1d23] sm:px-7">
-                              {formatDuration(agent.avg_talk_time)}
+                              {formatDuration(agent.avg_duration)}
                             </td>
                             <td className="px-4 py-4 text-center align-middle text-sm tabular-nums text-[#1a1d23] sm:px-7">
                               {formatDuration(agent.total_duration)}
                             </td>
-                            {/* <td className="px-4 py-4 text-right align-middle text-sm tabular-nums text-[#1a1d23] sm:px-7">
+                            <td className="px-4 py-4 text-right align-middle text-sm tabular-nums text-[#1a1d23] sm:px-7">
                               {agent.transfers}
                             </td>
                             <td className="px-4 py-4 text-right align-middle text-sm tabular-nums text-gray-500 sm:px-7">
                               {(agent.transfer_rate * 100).toFixed(1)}%
-                            </td> */}
+                            </td>
                           </tr>
                         );
                       })}
