@@ -142,59 +142,11 @@ const AgentLeadership = () => {
     <div className="min-h-screen bg-[#f5f6fa]">
       <RTNavbar />
       <main className="mx-auto max-w-[1440px] px-4 pb-12 pt-8 sm:px-8 lg:px-10">
-        <div className="mb-7 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-          <h1 className="font-urbanist text-[24px] font-semibold leading-[150%] text-[#1a1d23]">
-            Agent Leaderboard
-          </h1>
-          <div className="flex items-center gap-2 text-[13px] text-gray-500">
-           
-            <CalenderIcon width={15} height={15}/>
-          
-            <span className="font-medium text-gray-700">Period:</span>
-            <div className="relative">
-              <button
-                type="button"
-                className="flex h-9 w-[120px] items-center justify-between gap-1.5 rounded-lg border border-gray-200 bg-white px-3.5 text-[13px] font-medium text-gray-700 transition-colors hover:border-gray-300"
-                onClick={() => setDropdownOpen(o => !o)}
-              >
-                {period.label}
-                <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-                  <path
-                    d="M3 4.5L6 7.5L9 4.5"
-                    stroke="#374151"
-                    strokeWidth="1.5"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                </svg>
-
-
-              </button>
-              {dropdownOpen &&
-                <div className="absolute right-0 top-[calc(100%+4px)] z-50 w-full overflow-hidden rounded-lg border border-gray-200 bg-white shadow-[0_4px_16px_rgba(0,0,0,0.1)]">
-                  {PERIOD_OPTIONS.map(option =>
-                    <button
-                      key={option.value}
-                      type="button"
-                      className={`block w-full px-3.5 py-[9px] text-left text-[13px] transition-colors hover:bg-gray-50 ${option.value ===
-                      period.value
-                        ? "bg-indigo-50 font-semibold text-indigo-500"
-                        : "text-gray-700"}`}
-                      onClick={() => {
-                        setPeriod(option);
-                        setCurrentPage(1);
-                        setDateFrom("");
-                        setDateTo("");
-                        setDropdownOpen(false);
-                      }}
-                    >
-                      {option.label}
-                    </button>
-                  )}
-                </div>}
-            </div>
+          <div className="mb-7 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+            <h1 className="font-urbanist text-[24px] font-semibold leading-[150%] text-[#1a1d23]">
+              Agent Leaderboard
+            </h1>
           </div>
-        </div>
 
         <div className="mb-7 grid gap-5 sm:grid-cols-2 xl:grid-cols-4">
           <StatCard
@@ -231,15 +183,61 @@ const AgentLeadership = () => {
 
         <div className="overflow-hidden rounded-xl bg-white shadow-[0_1px_4px_rgba(0,0,0,0.05)]">
           <div className="border-b border-gray-100 px-4 pb-5 pt-6 sm:px-7">
-            <div className="mb-4">
-              <h1 className="font-urbanist text-[24px] font-semibold leading-[150%] text-[#1a1d23]">
-                Performance Rankings
-              </h1>
-              <p className="text-[14px] text-[#45556C] font-urbanist">
-                {pagination
-                  ? `Showing ${showingStart}–${showingEnd} of ${totalCount.toLocaleString()} records`
-                  : `Showing ${filtered.length} agents`}
-              </p>
+            <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <h1 className="font-urbanist text-[24px] font-semibold leading-[150%] text-[#1a1d23]">
+                  Performance Rankings
+                </h1>
+                <p className="text-[14px] text-[#45556C] font-urbanist">
+                  {pagination
+                    ? `Showing ${showingStart}–${showingEnd} of ${totalCount.toLocaleString()} records`
+                    : `Showing ${filtered.length} agents`}
+                </p>
+              </div>
+              <div className="flex items-center gap-2 text-[13px] text-gray-500 sm:ml-auto">
+                <CalenderIcon width={15} height={15} />
+                <span className="font-medium text-gray-700">Period:</span>
+                <div className="relative">
+                  <button
+                    type="button"
+                    className="flex h-9 w-[120px] items-center justify-between gap-1.5 rounded-lg border border-gray-200 bg-white px-3.5 text-[13px] font-medium text-gray-700 transition-colors hover:border-gray-300"
+                    onClick={() => setDropdownOpen(o => !o)}
+                  >
+                    {period.label}
+                    <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                      <path
+                        d="M3 4.5L6 7.5L9 4.5"
+                        stroke="#374151"
+                        strokeWidth="1.5"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    </svg>
+                  </button>
+                  {dropdownOpen &&
+                    <div className="absolute right-0 top-[calc(100%+4px)] z-50 w-full overflow-hidden rounded-lg border border-gray-200 bg-white shadow-[0_4px_16px_rgba(0,0,0,0.1)]">
+                      {PERIOD_OPTIONS.map(option =>
+                        <button
+                          key={option.value}
+                          type="button"
+                          className={`block w-full px-3.5 py-[9px] text-left text-[13px] transition-colors hover:bg-gray-50 ${option.value ===
+                          period.value
+                            ? "bg-indigo-50 font-semibold text-indigo-500"
+                            : "text-gray-700"}`}
+                          onClick={() => {
+                            setPeriod(option);
+                            setCurrentPage(1);
+                            setDateFrom("");
+                            setDateTo("");
+                            setDropdownOpen(false);
+                          }}
+                        >
+                          {option.label}
+                        </button>
+                      )}
+                    </div>}
+                </div>
+              </div>
             </div>
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               {/* <div className="flex flex-wrap items-center gap-3">
