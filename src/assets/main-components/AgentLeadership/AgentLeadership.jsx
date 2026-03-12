@@ -6,7 +6,13 @@ import { CallIcon, TimeIcon, GraphIcon, GroupIcon, CalenderIcon, ChaveronIcon } 
 import { getApiWithAuth } from "../../../utils/api";
 import { POOL_DASHBOARD_SUMMARY, POOL_DASHBOARD_LIST } from "../../../utils/apiUrls";
 
-const PERIODS = ["Today", "15 minutes", "60 minutes"];
+const PERIOD_OPTIONS = [
+  { label: "Today", value: "today" },
+  { label: "15 minutes", value: "15m" },
+  { label: "60 minutes", value: "1h" },
+  { label: "7 days", value: "7d" },
+  { label: "30 days", value: "30d" }
+];
 
 const MedalIcon = ({ rank }) => {
   return (
@@ -56,7 +62,7 @@ const formatDuration = (seconds) => {
 
 
 const AgentLeadership = () => {
-  const [period, setPeriod] = useState("Today");
+  const [period, setPeriod] = useState(PERIOD_OPTIONS[0]);
   const [search, setSearch] = useState("");
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [stats, setStats] = useState(null);
@@ -70,7 +76,7 @@ const AgentLeadership = () => {
 
   useEffect(() => {
     const fetchStats = async () => {
-      const res = await getApiWithAuth(POOL_DASHBOARD_SUMMARY);
+      const res = await getApiWithAuth(`${POOL_DASHBOARD_SUMMARY}?window=${period.value}`);
       if (res.success && res.data?.summary) {
         setStats(res.data.summary);
       } else if (!res.success && !res.redirecting) {
@@ -78,12 +84,16 @@ const AgentLeadership = () => {
       }
     };
     fetchStats();
-  }, []);
+  }, [period.value]);
 
   useEffect(() => {
     const fetchAgents = async () => {
       setLoadingAgents(true);
-      const params = new URLSearchParams({ page: String(currentPage), limit: "50" });
+      const params = new URLSearchParams({
+        page: String(currentPage),
+        limit: "50",
+        window: period.value
+      });
 
       if (dateTo) {
         if (dateFrom) params.set("dateFrom", dateFrom);
@@ -100,7 +110,7 @@ const AgentLeadership = () => {
       setLoadingAgents(false);
     };
     fetchAgents();
-  }, [currentPage, dateFrom, dateTo]);
+  }, [currentPage, dateFrom, dateTo, period.value]);
 
   const filtered = agents.filter(a =>
     a.pool_name?.toLowerCase().includes(search.toLowerCase()) ||
@@ -108,6 +118,10 @@ const AgentLeadership = () => {
   );
 
   const totalPages = pagination?.totalPages ?? 1;
+  const totalCount = pagination?.totalCount ?? 0;
+  const pageSize = pagination?.pageSize ?? 0;
+  const showingStart = pagination ? (currentPage - 1) * pageSize + 1 : 0;
+  const showingEnd = pagination ? Math.min(currentPage * pageSize, totalCount) : 0;
 
   const getPageNumbers = () => {
     const pages = [];
@@ -143,7 +157,7 @@ const AgentLeadership = () => {
                 className="flex h-9 w-[120px] items-center justify-between gap-1.5 rounded-lg border border-gray-200 bg-white px-3.5 text-[13px] font-medium text-gray-700 transition-colors hover:border-gray-300"
                 onClick={() => setDropdownOpen(o => !o)}
               >
-                {period}
+                {period.label}
                 <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
                   <path
                     d="M3 4.5L6 7.5L9 4.5"
@@ -158,20 +172,23 @@ const AgentLeadership = () => {
               </button>
               {dropdownOpen &&
                 <div className="absolute right-0 top-[calc(100%+4px)] z-50 w-full overflow-hidden rounded-lg border border-gray-200 bg-white shadow-[0_4px_16px_rgba(0,0,0,0.1)]">
-                  {PERIODS.map(p =>
+                  {PERIOD_OPTIONS.map(option =>
                     <button
-                      key={p}
+                      key={option.value}
                       type="button"
-                      className={`block w-full px-3.5 py-[9px] text-left text-[13px] transition-colors hover:bg-gray-50 ${p ===
-                      period
+                      className={`block w-full px-3.5 py-[9px] text-left text-[13px] transition-colors hover:bg-gray-50 ${option.value ===
+                      period.value
                         ? "bg-indigo-50 font-semibold text-indigo-500"
                         : "text-gray-700"}`}
                       onClick={() => {
-                        setPeriod(p);
+                        setPeriod(option);
+                        setCurrentPage(1);
+                        setDateFrom("");
+                        setDateTo("");
                         setDropdownOpen(false);
                       }}
                     >
-                      {p}
+                      {option.label}
                     </button>
                   )}
                 </div>}
@@ -220,7 +237,7 @@ const AgentLeadership = () => {
               </h1>
               <p className="text-[14px] text-[#45556C] font-urbanist">
                 {pagination
-                  ? `Showing ${(currentPage - 1) * pagination.pageSize + 1}–${Math.min(currentPage * pagination.pageSize, pagination.totalCount)} of ${pagination.totalCount.toLocaleString()} records`
+                  ? `Showing ${showingStart}–${showingEnd} of ${totalCount.toLocaleString()} records`
                   : `Showing ${filtered.length} agents`}
               </p>
             </div>
