@@ -334,18 +334,15 @@ const AgentLeadership = () => {
                   <th className="border-b border-gray-100 px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-[0.6px] text-[#45556C] font-urbanist sm:px-7">
                     Platform
                   </th>
-                   <th className="border-b border-gray-100 px-4 py-3 text-center text-[11px] font-semibold uppercase tracking-[0.6px] text-[#45556C] font-urbanist sm:px-7">
+                  <th className="border-b border-gray-100 px-4 py-3 text-center text-[11px] font-semibold uppercase tracking-[0.6px] text-[#45556C] font-urbanist sm:px-7">
                     Transfers
                   </th>
-
-                   <th className="border-b border-gray-100 px-4 py-3 text-center text-[11px] font-semibold uppercase tracking-[0.6px] text-[#45556C] font-urbanist sm:px-7">
+                  <th className="border-b border-gray-100 px-4 py-3 text-center text-[11px] font-semibold uppercase tracking-[0.6px] text-[#45556C] font-urbanist sm:px-7">
                     Transfer Rate
                   </th>
                   <th className="border-b border-gray-100 px-4 py-3 text-center text-[11px] font-semibold uppercase tracking-[0.6px] text-[#45556C] font-urbanist sm:px-7">
                     Total Dials
                   </th>
-                  
-                 
                   <th className="border-b border-gray-100 px-4 py-3 text-center text-[11px] font-semibold uppercase tracking-[0.6px] text-[#45556C] font-urbanist sm:px-7">
                     Connects
                   </th>
@@ -403,6 +400,12 @@ const AgentLeadership = () => {
                               </span>
                             </td>
                             <td className="px-4 py-4 text-center align-middle text-sm tabular-nums text-[#1a1d23] sm:px-7">
+                              {agent.transfers}
+                            </td>
+                            <td className="px-4 py-4 text-center align-middle text-sm tabular-nums text-[#1a1d23] sm:px-7">
+                              {(agent.transfer_rate * 100).toFixed(1)}%
+                            </td>
+                            <td className="px-4 py-4 text-center align-middle text-sm tabular-nums text-[#1a1d23] sm:px-7">
                               {agent.total_dials?.toLocaleString()}
                             </td>
                             <td className="px-4 py-4 text-center align-middle text-sm tabular-nums text-[#1a1d23] sm:px-7">
@@ -425,12 +428,6 @@ const AgentLeadership = () => {
                             {/* <td className="px-4 py-4 text-center align-middle text-sm tabular-nums text-[#1a1d23] sm:px-7">
                               {formatDuration(agent.total_duration)}
                             </td> */}
-                            <td className="px-4 py-4 text-center align-middle text-sm tabular-nums text-[#1a1d23] sm:px-7">
-                              {agent.transfers}
-                            </td>
-                            <td className="px-4 py-4 text-center align-middle text-sm tabular-nums text-gray-500 sm:px-7">
-                              {(agent.transfer_rate * 100).toFixed(1)}%
-                            </td>
                           </tr>
                         );
                       })}
