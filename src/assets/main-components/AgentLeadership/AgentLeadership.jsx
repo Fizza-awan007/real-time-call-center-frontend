@@ -6,7 +6,13 @@ import { CallIcon, TimeIcon, GraphIcon, GroupIcon, CalenderIcon, ChaveronIcon } 
 import { getApiWithAuth } from "../../../utils/api";
 import { POOL_DASHBOARD_SUMMARY, POOL_DASHBOARD_LIST } from "../../../utils/apiUrls";
 
-const PERIODS = ["Today", "15 minutes", "60 minutes"];
+const PERIOD_OPTIONS = [
+  { label: "Today", value: "today" },
+  { label: "15 minutes", value: "15m" },
+  { label: "60 minutes", value: "1h" },
+  { label: "7 days", value: "7d" },
+  { label: "30 days", value: "30d" }
+];
 
 const MedalIcon = ({ rank }) => {
   return (
@@ -56,7 +62,7 @@ const formatDuration = (seconds) => {
 
 
 const AgentLeadership = () => {
-  const [period, setPeriod] = useState("Today");
+  const [period, setPeriod] = useState(PERIOD_OPTIONS[0]);
   const [search, setSearch] = useState("");
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [stats, setStats] = useState(null);
@@ -70,7 +76,7 @@ const AgentLeadership = () => {
 
   useEffect(() => {
     const fetchStats = async () => {
-      const res = await getApiWithAuth(POOL_DASHBOARD_SUMMARY);
+      const res = await getApiWithAuth(`${POOL_DASHBOARD_SUMMARY}?window=${period.value}`);
       if (res.success && res.data?.summary) {
         setStats(res.data.summary);
       } else if (!res.success && !res.redirecting) {
@@ -78,12 +84,16 @@ const AgentLeadership = () => {
       }
     };
     fetchStats();
-  }, []);
+  }, [period.value]);
 
   useEffect(() => {
     const fetchAgents = async () => {
       setLoadingAgents(true);
-      const params = new URLSearchParams({ page: String(currentPage), limit: "50" });
+      const params = new URLSearchParams({
+        page: String(currentPage),
+        limit: "50",
+        window: period.value
+      });
 
       if (dateTo) {
         if (dateFrom) params.set("dateFrom", dateFrom);
@@ -100,7 +110,7 @@ const AgentLeadership = () => {
       setLoadingAgents(false);
     };
     fetchAgents();
-  }, [currentPage, dateFrom, dateTo]);
+  }, [currentPage, dateFrom, dateTo, period.value]);
 
   const filtered = agents.filter(a =>
     a.pool_name?.toLowerCase().includes(search.toLowerCase()) ||
@@ -108,6 +118,10 @@ const AgentLeadership = () => {
   );
 
   const totalPages = pagination?.totalPages ?? 1;
+  const totalCount = pagination?.totalCount ?? 0;
+  const pageSize = pagination?.pageSize ?? 0;
+  const showingStart = pagination ? (currentPage - 1) * pageSize + 1 : 0;
+  const showingEnd = pagination ? Math.min(currentPage * pageSize, totalCount) : 0;
 
   const getPageNumbers = () => {
     const pages = [];
@@ -128,56 +142,11 @@ const AgentLeadership = () => {
     <div className="min-h-screen bg-[#f5f6fa]">
       <RTNavbar />
       <main className="mx-auto max-w-[1440px] px-4 pb-12 pt-8 sm:px-8 lg:px-10">
-        <div className="mb-7 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-          <h1 className="font-urbanist text-[24px] font-semibold leading-[150%] text-[#1a1d23]">
-            Agent Leaderboard
-          </h1>
-          <div className="flex items-center gap-2 text-[13px] text-gray-500">
-           
-            <CalenderIcon width={15} height={15}/>
-          
-            <span className="font-medium text-gray-700">Period:</span>
-            <div className="relative">
-              <button
-                type="button"
-                className="flex h-9 w-[120px] items-center justify-between gap-1.5 rounded-lg border border-gray-200 bg-white px-3.5 text-[13px] font-medium text-gray-700 transition-colors hover:border-gray-300"
-                onClick={() => setDropdownOpen(o => !o)}
-              >
-                {period}
-                <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-                  <path
-                    d="M3 4.5L6 7.5L9 4.5"
-                    stroke="#374151"
-                    strokeWidth="1.5"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                </svg>
-
-
-              </button>
-              {dropdownOpen &&
-                <div className="absolute right-0 top-[calc(100%+4px)] z-50 w-full overflow-hidden rounded-lg border border-gray-200 bg-white shadow-[0_4px_16px_rgba(0,0,0,0.1)]">
-                  {PERIODS.map(p =>
-                    <button
-                      key={p}
-                      type="button"
-                      className={`block w-full px-3.5 py-[9px] text-left text-[13px] transition-colors hover:bg-gray-50 ${p ===
-                      period
-                        ? "bg-indigo-50 font-semibold text-indigo-500"
-                        : "text-gray-700"}`}
-                      onClick={() => {
-                        setPeriod(p);
-                        setDropdownOpen(false);
-                      }}
-                    >
-                      {p}
-                    </button>
-                  )}
-                </div>}
-            </div>
+          <div className="mb-7 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+            <h1 className="font-urbanist text-[24px] font-semibold leading-[150%] text-[#1a1d23]">
+              Agent Leaderboard
+            </h1>
           </div>
-        </div>
 
         <div className="mb-7 grid gap-5 sm:grid-cols-2 xl:grid-cols-4">
           <StatCard
@@ -214,18 +183,64 @@ const AgentLeadership = () => {
 
         <div className="overflow-hidden rounded-xl bg-white shadow-[0_1px_4px_rgba(0,0,0,0.05)]">
           <div className="border-b border-gray-100 px-4 pb-5 pt-6 sm:px-7">
-            <div className="mb-4">
-              <h1 className="font-urbanist text-[24px] font-semibold leading-[150%] text-[#1a1d23]">
-                Performance Rankings
-              </h1>
-              <p className="text-[14px] text-[#45556C] font-urbanist">
-                {pagination
-                  ? `Showing ${(currentPage - 1) * pagination.pageSize + 1}–${Math.min(currentPage * pagination.pageSize, pagination.totalCount)} of ${pagination.totalCount.toLocaleString()} records`
-                  : `Showing ${filtered.length} agents`}
-              </p>
+            <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <h1 className="font-urbanist text-[24px] font-semibold leading-[150%] text-[#1a1d23]">
+                  Performance Rankings
+                </h1>
+                <p className="text-[14px] text-[#45556C] font-urbanist">
+                  {pagination
+                    ? `Showing ${showingStart}–${showingEnd} of ${totalCount.toLocaleString()} records`
+                    : `Showing ${filtered.length} agents`}
+                </p>
+              </div>
+              <div className="flex items-center gap-2 text-[13px] text-gray-500 sm:ml-auto">
+                <CalenderIcon width={15} height={15} />
+                <span className="font-medium text-gray-700">Period:</span>
+                <div className="relative">
+                  <button
+                    type="button"
+                    className="flex h-9 w-[120px] items-center justify-between gap-1.5 rounded-lg border border-gray-200 bg-white px-3.5 text-[13px] font-medium text-gray-700 transition-colors hover:border-gray-300"
+                    onClick={() => setDropdownOpen(o => !o)}
+                  >
+                    {period.label}
+                    <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                      <path
+                        d="M3 4.5L6 7.5L9 4.5"
+                        stroke="#374151"
+                        strokeWidth="1.5"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    </svg>
+                  </button>
+                  {dropdownOpen &&
+                    <div className="absolute right-0 top-[calc(100%+4px)] z-50 w-full overflow-hidden rounded-lg border border-gray-200 bg-white shadow-[0_4px_16px_rgba(0,0,0,0.1)]">
+                      {PERIOD_OPTIONS.map(option =>
+                        <button
+                          key={option.value}
+                          type="button"
+                          className={`block w-full px-3.5 py-[9px] text-left text-[13px] transition-colors hover:bg-gray-50 ${option.value ===
+                          period.value
+                            ? "bg-indigo-50 font-semibold text-indigo-500"
+                            : "text-gray-700"}`}
+                          onClick={() => {
+                            setPeriod(option);
+                            setCurrentPage(1);
+                            setDateFrom("");
+                            setDateTo("");
+                            setDropdownOpen(false);
+                          }}
+                        >
+                          {option.label}
+                        </button>
+                      )}
+                    </div>}
+                </div>
+              </div>
             </div>
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <div className="flex flex-wrap items-center gap-3">
+              {/* <div className="flex flex-wrap items-center gap-3">
                 <div className="flex items-center gap-2">
                   <label
                     htmlFor="date-from"
@@ -264,8 +279,8 @@ const AgentLeadership = () => {
                     className="h-[38px] rounded-lg border border-gray-200 bg-white px-3 text-[13px] text-[#1a1d23] outline-none transition-colors focus:border-indigo-500"
                   />
                 </div>
-              </div>
-              <div className="relative flex items-center">
+              </div> */}
+              <div className="relative flex items-center sm:ml-auto">
                 <svg
                   className="pointer-events-none absolute left-3"
                   width="16"
@@ -314,6 +329,10 @@ const AgentLeadership = () => {
                   <th className="border-b border-gray-100 px-4 py-3 text-center text-[11px] font-semibold uppercase tracking-[0.6px] text-[#45556C] font-urbanist sm:px-7">
                     Total Dials
                   </th>
+                  
+                  <th className="border-b border-gray-100 px-4 py-3 text-center text-[11px] font-semibold uppercase tracking-[0.6px] text-[#45556C] font-urbanist sm:px-7">
+                    Transfer Rate
+                  </th>
                   <th className="border-b border-gray-100 px-4 py-3 text-center text-[11px] font-semibold uppercase tracking-[0.6px] text-[#45556C] font-urbanist sm:px-7">
                     Connects
                   </th>
@@ -323,15 +342,13 @@ const AgentLeadership = () => {
                   <th className="border-b border-gray-100 px-4 py-3 text-center text-[11px] font-semibold uppercase tracking-[0.6px] text-[#45556C] font-urbanist sm:px-7">
                     Avg Duration
                   </th>
+                   <th className="border-b border-gray-100 px-4 py-3 text-center text-[11px] font-semibold uppercase tracking-[0.6px] text-[#45556C] font-urbanist sm:px-7">
+                    Transfers
+                  </th>
                   {/* <th className="border-b border-gray-100 px-4 py-3 text-center text-[11px] font-semibold uppercase tracking-[0.6px] text-[#45556C] font-urbanist sm:px-7">
                     Total Duration
                   </th> */}
-                  <th className="border-b border-gray-100 px-4 py-3 text-right text-[11px] font-semibold uppercase tracking-[0.6px] text-[#45556C] font-urbanist sm:px-7">
-                    Transfers
-                  </th>
-                  <th className="border-b border-gray-100 px-4 py-3 text-right text-[11px] font-semibold uppercase tracking-[0.6px] text-[#45556C] font-urbanist sm:px-7">
-                    Transfer Rate
-                  </th>
+                 
                 </tr>
               </thead>
               <tbody>
@@ -371,7 +388,7 @@ const AgentLeadership = () => {
                             </td>
                             <td className="px-4 py-4 align-middle text-sm sm:px-7">
                               <span className="inline-flex items-center rounded-full bg-indigo-50 px-2.5 py-0.5 text-[12px] font-medium text-indigo-600 capitalize">
-                                {agent.platform}
+                                Readymode
                               </span>
                             </td>
                             <td className="px-4 py-4 text-center align-middle text-sm tabular-nums text-[#1a1d23] sm:px-7">
@@ -397,10 +414,10 @@ const AgentLeadership = () => {
                             {/* <td className="px-4 py-4 text-center align-middle text-sm tabular-nums text-[#1a1d23] sm:px-7">
                               {formatDuration(agent.total_duration)}
                             </td> */}
-                            <td className="px-4 py-4 text-right align-middle text-sm tabular-nums text-[#1a1d23] sm:px-7">
+                            <td className="px-4 py-4 text-center align-middle text-sm tabular-nums text-[#1a1d23] sm:px-7">
                               {agent.transfers}
                             </td>
-                            <td className="px-4 py-4 text-right align-middle text-sm tabular-nums text-gray-500 sm:px-7">
+                            <td className="px-4 py-4 text-center align-middle text-sm tabular-nums text-gray-500 sm:px-7">
                               {(agent.transfer_rate * 100).toFixed(1)}%
                             </td>
                           </tr>
