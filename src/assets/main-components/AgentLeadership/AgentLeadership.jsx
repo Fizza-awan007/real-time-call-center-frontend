@@ -242,7 +242,7 @@ const AgentLeadership = () => {
               </p>
             </div>
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <div className="flex flex-wrap items-center gap-3">
+              {/* <div className="flex flex-wrap items-center gap-3">
                 <div className="flex items-center gap-2">
                   <label
                     htmlFor="date-from"
@@ -281,8 +281,8 @@ const AgentLeadership = () => {
                     className="h-[38px] rounded-lg border border-gray-200 bg-white px-3 text-[13px] text-[#1a1d23] outline-none transition-colors focus:border-indigo-500"
                   />
                 </div>
-              </div>
-              <div className="relative flex items-center">
+              </div> */}
+              <div className="relative flex items-center sm:ml-auto">
                 <svg
                   className="pointer-events-none absolute left-3"
                   width="16"
@@ -388,7 +388,7 @@ const AgentLeadership = () => {
                             </td>
                             <td className="px-4 py-4 align-middle text-sm sm:px-7">
                               <span className="inline-flex items-center rounded-full bg-indigo-50 px-2.5 py-0.5 text-[12px] font-medium text-indigo-600 capitalize">
-                                {agent.platform}
+                                Readymode
                               </span>
                             </td>
                             <td className="px-4 py-4 text-center align-middle text-sm tabular-nums text-[#1a1d23] sm:px-7">
