@@ -165,7 +165,7 @@ const AgentLeadership = () => {
           />
           <StatCard
             label="Connect Rate"
-            value={stats ? `${stats.connect_rate}%` : "—"}
+            value={stats ? `${stats.connect_rate === 100 ? "100" : Number(stats.connect_rate).toFixed(2)}%` : "—"}
             iconBgClass="bg-purple-50"
             icon={
               <GraphIcon width={28} height={28} className="text-purple-500" />
@@ -403,7 +403,7 @@ const AgentLeadership = () => {
                               {agent.transfers}
                             </td>
                             <td className="px-4 py-4 text-center align-middle text-sm tabular-nums text-[#1a1d23] sm:px-7">
-                            {agent.transfer_rate?.toFixed(4)}
+                            {agent.transfer_rate?.toFixed(2)}
                             </td>
                             <td className="px-4 py-4 text-center align-middle text-sm tabular-nums text-[#1a1d23] sm:px-7">
                               {agent.total_dials?.toLocaleString()}
@@ -411,7 +411,7 @@ const AgentLeadership = () => {
                             <td className="px-4 py-4 text-center align-middle text-sm tabular-nums text-[#1a1d23] sm:px-7">
                               {agent.connects?.toLocaleString()}
                             </td>
-                            <td className="px-4 py-4 text-center align-middle text-sm tabular-nums sm:px-7">
+                            {/* <td className="px-4 py-4 text-center align-middle text-sm tabular-nums sm:px-7">
                               <span
                                 className={`font-semibold ${agent.connect_rate >= 80
                                   ? "text-emerald-600"
@@ -421,7 +421,21 @@ const AgentLeadership = () => {
                               >
                                 {agent.connect_rate?.toFixed(1)}%
                               </span>
-                            </td>
+                            </td> */}
+
+  <td className="px-4 py-4 text-center align-middle text-sm tabular-nums sm:px-7">
+  <span
+    className={`font-semibold ${
+      agent.connect_rate >= 80
+        ? "text-emerald-600"
+        : agent.connect_rate >= 50
+        ? "text-amber-500"
+        : "text-red-500"
+    }`}
+  >
+    {agent.connect_rate === 100 ? "100" : agent.connect_rate?.toFixed(2)}%
+  </span>
+</td>
                             <td className="px-4 py-4 text-center align-middle text-sm tabular-nums text-[#1a1d23] sm:px-7">
                               {formatDuration(agent.avg_duration)}
                             </td>
