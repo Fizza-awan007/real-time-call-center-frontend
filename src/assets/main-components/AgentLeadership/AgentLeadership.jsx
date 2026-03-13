@@ -11,7 +11,7 @@ const PERIOD_OPTIONS = [
   { label: "15 minutes", value: "15m" },
   { label: "60 minutes", value: "1h" },
   { label: "7 days", value: "7d" },
-  { label: "30 days", value: "30d" }
+  // { label: "30 days", value: "30d" }
 ];
 
 const MedalIcon = ({ rank }) => {
@@ -188,11 +188,11 @@ const AgentLeadership = () => {
                 <h1 className="font-urbanist text-[18px] font-semibold leading-[150%] text-[#1a1d23] sm:text-[24px]">
                   Performance Rankings
                 </h1>
-                <p className="text-[13px] text-[#45556C] font-urbanist sm:text-[14px]">
+                {/* <p className="text-[13px] text-[#45556C] font-urbanist sm:text-[14px]">
                   {pagination
                     ? `Showing ${showingStart}–${showingEnd} of ${totalCount.toLocaleString()} records`
                     : `Showing ${filtered.length} agents`}
-                </p>
+                </p> */}
               </div>
 
               {/* Desktop: search + filter in one row; Mobile: search row1, filter row2 */}
