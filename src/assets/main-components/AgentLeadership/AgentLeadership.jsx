@@ -403,7 +403,7 @@ const AgentLeadership = () => {
                               {agent.transfers}
                             </td>
                             <td className="px-4 py-4 text-center align-middle text-sm tabular-nums text-[#1a1d23] sm:px-7">
-                              {(agent.transfer_rate * 100).toFixed(1)}%
+                            {agent.transfer_rate?.toFixed(4)}
                             </td>
                             <td className="px-4 py-4 text-center align-middle text-sm tabular-nums text-[#1a1d23] sm:px-7">
                               {agent.total_dials?.toLocaleString()}
