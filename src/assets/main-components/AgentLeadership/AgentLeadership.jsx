@@ -316,7 +316,7 @@ const AgentLeadership = () => {
                 </div>
               </div>
             </div>
-            {/* <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div className="flex flex-wrap items-center gap-3">
                 <div className="flex items-center gap-2">
                   <label
@@ -357,7 +357,7 @@ const AgentLeadership = () => {
                   />
                 </div>
               </div>
-            </div> */}
+            </div>
           </div>
 
           <div className="overflow-x-auto">
