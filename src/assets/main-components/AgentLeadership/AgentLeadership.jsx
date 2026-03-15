@@ -85,10 +85,14 @@ const AgentLeadership = () => {
   const [loadingAgents, setLoadingAgents] = useState(false);
 
   useEffect(() => {
+    if (!period) return;
+    const controller = new AbortController();
     const fetchStats = async () => {
       const res = await getApiWithAuth(
-        `${POOL_DASHBOARD_SUMMARY}?window=${period.value}`
+        `${POOL_DASHBOARD_SUMMARY}?window=${period.value}`,
+        controller.signal
       );
+      if (res.cancelled) return;
       if (res.success && res.data?.summary) {
         setStats(res.data.summary);
       } else if (!res.success && !res.redirecting) {
@@ -98,25 +102,33 @@ const AgentLeadership = () => {
       }
     };
     fetchStats();
-  }, [period.value]);
+    return () => controller.abort();
+  }, [period]);
 
   useEffect(() => {
+    // Wait until both dates are selected, or neither is selected
+    if ((dateFrom && !dateTo) || (!dateFrom && dateTo)) return;
+    const controller = new AbortController();
     const fetchAgents = async () => {
       setLoadingAgents(true);
       const params = new URLSearchParams({
         page: String(currentPage),
         limit: "50",
-        window: period.value
       });
 
-      if (dateTo) {
-        if (dateFrom) params.set("dateFrom", dateFrom);
+      const dateFilterActive = dateFrom && dateTo;
+      if (dateFilterActive) {
+        params.set("dateFrom", dateFrom);
         params.set("dateTo", dateTo);
+      } else if (!dateFrom && !dateTo && period) {
+        params.set("window", period.value);
       }
 
       const res = await getApiWithAuth(
-        `${POOL_DASHBOARD_LIST}?${params.toString()}`
+        `${POOL_DASHBOARD_LIST}?${params.toString()}`,
+        controller.signal
       );
+      if (res.cancelled) return;
       if (res.success && res.data?.data) {
         setAgents(res.data.data);
         setPagination({
@@ -136,7 +148,8 @@ const AgentLeadership = () => {
       setLoadingAgents(false);
     };
     fetchAgents();
-  }, [currentPage, dateFrom, dateTo, period.value]);
+    return () => controller.abort();
+  }, [currentPage, dateFrom, dateTo, period]);
 
   const filtered = agents.filter(
     (a) =>
@@ -272,7 +285,7 @@ const AgentLeadership = () => {
                       className="flex h-9 w-[120px] items-center justify-between gap-1.5 rounded-lg border border-gray-200 bg-white px-3.5 text-[13px] font-medium text-gray-700 transition-colors hover:border-gray-300"
                       onClick={() => setDropdownOpen((o) => !o)}
                     >
-                      {period.label}
+                      {period ? period.label : "Period"}
                       <svg
                         width="12"
                         height="12"
@@ -295,7 +308,7 @@ const AgentLeadership = () => {
                             key={option.value}
                             type="button"
                             className={`block w-full px-3.5 py-[9px] text-left text-[13px] transition-colors hover:bg-gray-50 ${
-                              option.value === period.value
+                              period && option.value === period.value
                                 ? "bg-indigo-50 font-semibold text-indigo-500"
                                 : "text-gray-700"
                             }`}
@@ -333,6 +346,7 @@ const AgentLeadership = () => {
                     onChange={(e) => {
                       setDateFrom(e.target.value);
                       setCurrentPage(1);
+                      if (e.target.value && dateTo) setPeriod(null);
                     }}
                     className="h-[38px] rounded-lg border border-gray-200 bg-white px-3 text-[13px] text-[#1a1d23] outline-none transition-colors focus:border-indigo-500"
                   />
@@ -352,6 +366,7 @@ const AgentLeadership = () => {
                     onChange={(e) => {
                       setDateTo(e.target.value);
                       setCurrentPage(1);
+                      if (e.target.value) setPeriod(null);
                     }}
                     className="h-[38px] rounded-lg border border-gray-200 bg-white px-3 text-[13px] text-[#1a1d23] outline-none transition-colors focus:border-indigo-500"
                   />

@@ -63,12 +63,15 @@ export const putAPIWithAuth = async (url, body, headers) => {
 //   }
 // };
 
-export const getApiWithAuth = async (url) => {
+export const getApiWithAuth = async (url, signal) => {
   try {
     await setApiHeader();
-    const res = await axios.get(url);
+    const res = await axios.get(url, { signal });
     return { data: res?.data, status: res.status, success: true };
   } catch (err) {
+    if (axios.isCancel(err)) {
+      return { success: false, cancelled: true };
+    }
     if (
       err.response?.data?.code === "token_not_valid" ||
       err.response?.data?.messages?.some(
