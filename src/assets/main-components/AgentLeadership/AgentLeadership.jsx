@@ -85,11 +85,19 @@ const AgentLeadership = () => {
   const [loadingAgents, setLoadingAgents] = useState(false);
 
   useEffect(() => {
-    if (!period) return;
+    if ((dateFrom && !dateTo) || (!dateFrom && dateTo)) return;
+    if (!period && !(dateFrom && dateTo)) return;
     const controller = new AbortController();
     const fetchStats = async () => {
+      const params = new URLSearchParams();
+      if (dateFrom && dateTo) {
+        params.set("dateFrom", dateFrom);
+        params.set("dateTo", dateTo);
+      } else {
+        params.set("window", period.value);
+      }
       const res = await getApiWithAuth(
-        `${POOL_DASHBOARD_SUMMARY}?window=${period.value}`,
+        `${POOL_DASHBOARD_SUMMARY}?${params.toString()}`,
         controller.signal
       );
       if (res.cancelled) return;
@@ -103,7 +111,7 @@ const AgentLeadership = () => {
     };
     fetchStats();
     return () => controller.abort();
-  }, [period]);
+  }, [period, dateFrom, dateTo]);
 
   useEffect(() => {
     // Wait until both dates are selected, or neither is selected
