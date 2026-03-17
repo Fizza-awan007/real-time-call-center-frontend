@@ -78,6 +78,8 @@ const AgentLeadership = () => {
   const [stats, setStats] = useState(null);
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
+  const [startTime, setStartTime] = useState("");
+  const [endTime, setEndTime] = useState("");
 
   const [agents, setAgents] = useState([]);
   const [pagination, setPagination] = useState(null);
@@ -85,14 +87,15 @@ const AgentLeadership = () => {
   const [loadingAgents, setLoadingAgents] = useState(false);
 
   useEffect(() => {
-    if ((dateFrom && !dateTo) || (!dateFrom && dateTo)) return;
-    if (!period && !(dateFrom && dateTo)) return;
+    if (!period && !dateFrom) return;
     const controller = new AbortController();
     const fetchStats = async () => {
       const params = new URLSearchParams();
-      if (dateFrom && dateTo) {
-        params.set("dateFrom", dateFrom);
-        params.set("dateTo", dateTo);
+      if (dateFrom) {
+        const finalDateFrom = `${dateFrom} ${startTime ? `${startTime}:00` : "00:00:00"}`;
+        const finalDateTo = `${dateTo || dateFrom} ${endTime ? `${endTime}:59` : "23:59:59"}`;
+        params.set("dateFrom", finalDateFrom);
+        params.set("dateTo", finalDateTo);
       } else {
         params.set("window", period.value);
       }
@@ -111,24 +114,24 @@ const AgentLeadership = () => {
     };
     fetchStats();
     return () => controller.abort();
-  }, [period, dateFrom, dateTo]);
+  }, [period, dateFrom, dateTo, startTime, endTime]);
 
   useEffect(() => {
-    // Wait until both dates are selected, or neither is selected
-    if ((dateFrom && !dateTo) || (!dateFrom && dateTo)) return;
+    if (!period && !dateFrom) return;
     const controller = new AbortController();
     const fetchAgents = async () => {
       setLoadingAgents(true);
       const params = new URLSearchParams({
         page: String(currentPage),
-        limit: "50",
+        limit: "50"
       });
 
-      const dateFilterActive = dateFrom && dateTo;
-      if (dateFilterActive) {
-        params.set("dateFrom", dateFrom);
-        params.set("dateTo", dateTo);
-      } else if (!dateFrom && !dateTo && period) {
+      if (dateFrom) {
+        const finalDateFrom = `${dateFrom} ${startTime ? `${startTime}:00` : "00:00:00"}`;
+        const finalDateTo = `${dateTo || dateFrom} ${endTime ? `${endTime}:59` : "23:59:59"}`;
+        params.set("dateFrom", finalDateFrom);
+        params.set("dateTo", finalDateTo);
+      } else {
         params.set("window", period.value);
       }
 
@@ -157,7 +160,7 @@ const AgentLeadership = () => {
     };
     fetchAgents();
     return () => controller.abort();
-  }, [currentPage, dateFrom, dateTo, period]);
+  }, [currentPage, dateFrom, dateTo, startTime, endTime, period]);
 
   const filtered = agents.filter(
     (a) =>
@@ -325,6 +328,8 @@ const AgentLeadership = () => {
                               setCurrentPage(1);
                               setDateFrom("");
                               setDateTo("");
+                              setStartTime("");
+                              setEndTime("");
                               setDropdownOpen(false);
                             }}
                           >
@@ -354,7 +359,17 @@ const AgentLeadership = () => {
                     onChange={(e) => {
                       setDateFrom(e.target.value);
                       setCurrentPage(1);
-                      if (e.target.value && dateTo) setPeriod(null);
+                      if (e.target.value) setPeriod(null);
+                    }}
+                    className="h-[38px] rounded-lg border border-gray-200 bg-white px-3 text-[13px] text-[#1a1d23] outline-none transition-colors focus:border-indigo-500"
+                  />
+                  <input
+                    type="time"
+                    value={startTime}
+                    onChange={(e) => {
+                      setStartTime(e.target.value);
+                      setCurrentPage(1);
+                      if (dateFrom) setPeriod(null);
                     }}
                     className="h-[38px] rounded-lg border border-gray-200 bg-white px-3 text-[13px] text-[#1a1d23] outline-none transition-colors focus:border-indigo-500"
                   />
@@ -375,6 +390,16 @@ const AgentLeadership = () => {
                       setDateTo(e.target.value);
                       setCurrentPage(1);
                       if (e.target.value) setPeriod(null);
+                    }}
+                    className="h-[38px] rounded-lg border border-gray-200 bg-white px-3 text-[13px] text-[#1a1d23] outline-none transition-colors focus:border-indigo-500"
+                  />
+                  <input
+                    type="time"
+                    value={endTime}
+                    onChange={(e) => {
+                      setEndTime(e.target.value);
+                      setCurrentPage(1);
+                      if (dateFrom) setPeriod(null);
                     }}
                     className="h-[38px] rounded-lg border border-gray-200 bg-white px-3 text-[13px] text-[#1a1d23] outline-none transition-colors focus:border-indigo-500"
                   />
