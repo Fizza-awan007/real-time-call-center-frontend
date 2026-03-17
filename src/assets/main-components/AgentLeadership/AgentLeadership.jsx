@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import toast from "react-hot-toast";
 import { RTNavbar } from "../../common-components/index";
+import ClockPicker from "../../common-components/ClockPicker";
 
 import {
   CallIcon,
@@ -80,6 +81,7 @@ const AgentLeadership = () => {
   const [dateTo, setDateTo] = useState("");
   const [startTime, setStartTime] = useState("");
   const [endTime, setEndTime] = useState("");
+  const [clockOpen, setClockOpen] = useState(null); // "start" | "end" | null
 
   const [agents, setAgents] = useState([]);
   const [pagination, setPagination] = useState(null);
@@ -359,16 +361,33 @@ const AgentLeadership = () => {
                       }}
                       className="h-[38px] w-full min-w-0 rounded-lg border border-gray-200 bg-white px-2.5 text-[13px] text-[#1a1d23] outline-none transition-colors focus:border-indigo-500 min-[400px]:w-auto min-[400px]:px-3"
                     />
-                    <input
-                      type="time"
-                      value={startTime}
-                      onChange={(e) => {
-                        setStartTime(e.target.value);
-                        setCurrentPage(1);
-                        if (dateFrom) setPeriod(null);
-                      }}
-                      className="h-[38px] w-full min-w-0 rounded-lg border border-gray-200 bg-white px-2.5 text-[13px] text-[#1a1d23] outline-none transition-colors focus:border-indigo-500 min-[400px]:w-auto min-[400px]:px-3"
-                    />
+                    <div className="relative">
+                      <button
+                        type="button"
+                        onClick={() => setClockOpen(clockOpen === "start" ? null : "start")}
+                        className="flex h-[38px] w-full min-w-0 items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 text-[13px] text-[#1a1d23] transition-colors hover:border-indigo-400 min-[400px]:w-auto"
+                      >
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6c63ff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+                        </svg>
+                        <span className={startTime ? "text-[#1a1d23]" : "text-gray-400"}>
+                          {startTime || "Start time"}
+                        </span>
+                      </button>
+                      {clockOpen === "start" && (
+                        <ClockPicker
+                          label="SELECT START TIME"
+                          value={startTime}
+                          onConfirm={(val) => {
+                            setStartTime(val);
+                            if (dateFrom) setPeriod(null);
+                            setCurrentPage(1);
+                            setClockOpen(null);
+                          }}
+                          onCancel={() => setClockOpen(null)}
+                        />
+                      )}
+                    </div>
                   </div>
                 </div>
                 <div className="flex flex-col gap-1.5 sm:flex-row sm:items-center sm:gap-2">
@@ -391,16 +410,33 @@ const AgentLeadership = () => {
                       }}
                       className="h-[38px] w-full min-w-0 rounded-lg border border-gray-200 bg-white px-2.5 text-[13px] text-[#1a1d23] outline-none transition-colors focus:border-indigo-500 min-[400px]:w-auto min-[400px]:px-3"
                     />
-                    <input
-                      type="time"
-                      value={endTime}
-                      onChange={(e) => {
-                        setEndTime(e.target.value);
-                        setCurrentPage(1);
-                        if (dateFrom) setPeriod(null);
-                      }}
-                      className="h-[38px] w-full min-w-0 rounded-lg border border-gray-200 bg-white px-2.5 text-[13px] text-[#1a1d23] outline-none transition-colors focus:border-indigo-500 min-[400px]:w-auto min-[400px]:px-3"
-                    />
+                    <div className="relative">
+                      <button
+                        type="button"
+                        onClick={() => setClockOpen(clockOpen === "end" ? null : "end")}
+                        className="flex h-[38px] w-full min-w-0 items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 text-[13px] text-[#1a1d23] transition-colors hover:border-indigo-400 min-[400px]:w-auto"
+                      >
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6c63ff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+                        </svg>
+                        <span className={endTime ? "text-[#1a1d23]" : "text-gray-400"}>
+                          {endTime || "End time"}
+                        </span>
+                      </button>
+                      {clockOpen === "end" && (
+                        <ClockPicker
+                          label="SELECT END TIME"
+                          value={endTime}
+                          onConfirm={(val) => {
+                            setEndTime(val);
+                            if (dateFrom) setPeriod(null);
+                            setCurrentPage(1);
+                            setClockOpen(null);
+                          }}
+                          onCancel={() => setClockOpen(null)}
+                        />
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -607,6 +643,7 @@ const AgentLeadership = () => {
           )}
         </div>
       </main>
+
     </div>
   );
 };
