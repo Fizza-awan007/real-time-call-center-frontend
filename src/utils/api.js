@@ -4,7 +4,7 @@ import { getAccessToken } from "./localStorage";
 export const BASE_URL = import.meta.env.VITE_BACKEND_URL;
 console.log("base url", BASE_URL);
 axios.defaults.baseURL = BASE_URL;
-axios.defaults.timeout = 120000;
+axios.defaults.timeout = 300000;
 
 export const postAPIWithoutAuth = async (url, body) => {
   try {
