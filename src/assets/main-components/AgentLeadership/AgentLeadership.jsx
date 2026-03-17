@@ -238,18 +238,13 @@ const AgentLeadership = () => {
           />
         </div>
 
-        <div className="overflow-hidden rounded-xl bg-white shadow-[0_1px_4px_rgba(0,0,0,0.05)]">
+        <div className="rounded-xl bg-white shadow-[0_1px_4px_rgba(0,0,0,0.05)]">
           <div className="border-b border-gray-100 px-4 pb-5 pt-6 sm:px-7">
             <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <h1 className="font-urbanist text-[18px] font-semibold leading-[150%] text-[#1a1d23] sm:text-[24px]">
                   Performance Rankings
                 </h1>
-                {/* <p className="text-[13px] text-[#45556C] font-urbanist sm:text-[14px]">
-                  {pagination
-                    ? `Showing ${showingStart}–${showingEnd} of ${totalCount.toLocaleString()} records`
-                    : `Showing ${filtered.length} agents`}
-                </p> */}
               </div>
 
               {/* Desktop: search + filter in one row; Mobile: search row1, filter row2 */}
@@ -342,73 +337,77 @@ const AgentLeadership = () => {
                 </div>
               </div>
             </div>
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <div className="flex flex-wrap items-center gap-3">
-                <div className="flex items-center gap-2">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
+                <div className="flex flex-col gap-1.5 sm:flex-row sm:items-center sm:gap-2">
                   <label
                     htmlFor="date-from"
                     className="text-[13px] font-medium text-gray-700"
                   >
                     From
                   </label>
-                  <input
-                    id="date-from"
-                    type="date"
-                    value={dateFrom}
-                    max={dateTo || undefined}
-                    onChange={(e) => {
-                      setDateFrom(e.target.value);
-                      setCurrentPage(1);
-                      if (e.target.value) setPeriod(null);
-                    }}
-                    className="h-[38px] rounded-lg border border-gray-200 bg-white px-3 text-[13px] text-[#1a1d23] outline-none transition-colors focus:border-indigo-500"
-                  />
-                  <input
-                    type="time"
-                    value={startTime}
-                    onChange={(e) => {
-                      setStartTime(e.target.value);
-                      setCurrentPage(1);
-                      if (dateFrom) setPeriod(null);
-                    }}
-                    className="h-[38px] rounded-lg border border-gray-200 bg-white px-3 text-[13px] text-[#1a1d23] outline-none transition-colors focus:border-indigo-500"
-                  />
+                  <div className="flex flex-col gap-2 min-[400px]:flex-row min-[400px]:items-center">
+                    <input
+                      id="date-from"
+                      type="date"
+                      value={dateFrom}
+                      max={dateTo || undefined}
+                      onChange={(e) => {
+                        setDateFrom(e.target.value);
+                        setCurrentPage(1);
+                        if (e.target.value) setPeriod(null);
+                      }}
+                      className="h-[38px] w-full min-w-0 rounded-lg border border-gray-200 bg-white px-2.5 text-[13px] text-[#1a1d23] outline-none transition-colors focus:border-indigo-500 min-[400px]:w-auto min-[400px]:px-3"
+                    />
+                    <input
+                      type="time"
+                      value={startTime}
+                      onChange={(e) => {
+                        setStartTime(e.target.value);
+                        setCurrentPage(1);
+                        if (dateFrom) setPeriod(null);
+                      }}
+                      className="h-[38px] w-full min-w-0 rounded-lg border border-gray-200 bg-white px-2.5 text-[13px] text-[#1a1d23] outline-none transition-colors focus:border-indigo-500 min-[400px]:w-auto min-[400px]:px-3"
+                    />
+                  </div>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex flex-col gap-1.5 sm:flex-row sm:items-center sm:gap-2">
                   <label
                     htmlFor="date-to"
                     className="text-[13px] font-medium text-gray-700"
                   >
                     To
                   </label>
-                  <input
-                    id="date-to"
-                    type="date"
-                    value={dateTo}
-                    min={dateFrom || undefined}
-                    onChange={(e) => {
-                      setDateTo(e.target.value);
-                      setCurrentPage(1);
-                      if (e.target.value) setPeriod(null);
-                    }}
-                    className="h-[38px] rounded-lg border border-gray-200 bg-white px-3 text-[13px] text-[#1a1d23] outline-none transition-colors focus:border-indigo-500"
-                  />
-                  <input
-                    type="time"
-                    value={endTime}
-                    onChange={(e) => {
-                      setEndTime(e.target.value);
-                      setCurrentPage(1);
-                      if (dateFrom) setPeriod(null);
-                    }}
-                    className="h-[38px] rounded-lg border border-gray-200 bg-white px-3 text-[13px] text-[#1a1d23] outline-none transition-colors focus:border-indigo-500"
-                  />
+                  <div className="flex flex-col gap-2 min-[400px]:flex-row min-[400px]:items-center">
+                    <input
+                      id="date-to"
+                      type="date"
+                      value={dateTo}
+                      min={dateFrom || undefined}
+                      onChange={(e) => {
+                        setDateTo(e.target.value);
+                        setCurrentPage(1);
+                        if (e.target.value) setPeriod(null);
+                      }}
+                      className="h-[38px] w-full min-w-0 rounded-lg border border-gray-200 bg-white px-2.5 text-[13px] text-[#1a1d23] outline-none transition-colors focus:border-indigo-500 min-[400px]:w-auto min-[400px]:px-3"
+                    />
+                    <input
+                      type="time"
+                      value={endTime}
+                      onChange={(e) => {
+                        setEndTime(e.target.value);
+                        setCurrentPage(1);
+                        if (dateFrom) setPeriod(null);
+                      }}
+                      className="h-[38px] w-full min-w-0 rounded-lg border border-gray-200 bg-white px-2.5 text-[13px] text-[#1a1d23] outline-none transition-colors focus:border-indigo-500 min-[400px]:w-auto min-[400px]:px-3"
+                    />
+                  </div>
                 </div>
               </div>
             </div>
           </div>
 
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto rounded-b-xl">
             <table className="w-full border-collapse">
               <thead>
                 <tr>
@@ -490,7 +489,7 @@ const AgentLeadership = () => {
                           {agent.transfers}
                         </td>
                         <td className="px-4 py-4 text-center align-middle text-sm tabular-nums text-[#1a1d23] sm:px-7">
-                          {agent.transfer_rate?.toFixed(2)}
+                          {agent.transfer_rate?.toFixed(2)}%
                         </td>
                         <td className="px-4 py-4 text-center align-middle text-sm tabular-nums text-[#1a1d23] sm:px-7">
                           {agent.total_dials?.toLocaleString()}
@@ -541,11 +540,11 @@ const AgentLeadership = () => {
           </div>
 
           {pagination && totalPages > 1 && (
-            <div className="flex items-center justify-between border-t border-gray-100 px-4 py-4 sm:px-7">
+            <div className="flex flex-col items-center justify-between gap-4 border-t border-gray-100 px-4 py-4 sm:flex-row sm:gap-0 sm:px-7">
               <p className="text-[13px] text-[#62748E]">
                 Page {currentPage} of {totalPages.toLocaleString()}
               </p>
-              <div className="flex items-center gap-1">
+              <div className="flex flex-wrap items-center justify-center gap-1">
                 <button
                   type="button"
                   disabled={!pagination.hasPrev}
