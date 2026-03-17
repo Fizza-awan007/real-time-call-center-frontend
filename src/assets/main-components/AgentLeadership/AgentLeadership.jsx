@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import toast from "react-hot-toast";
 import { RTNavbar } from "../../common-components/index";
 import ClockPicker from "../../common-components/ClockPicker";
@@ -88,80 +88,112 @@ const AgentLeadership = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [loadingAgents, setLoadingAgents] = useState(false);
 
+  // Track latest request timestamps to prevent race conditions
+  const latestStatsRequest = useRef(0);
+  const latestAgentsRequest = useRef(0);
+
   useEffect(() => {
     if (!period && !dateFrom) return;
-    const controller = new AbortController();
-    const fetchStats = async () => {
-      const params = new URLSearchParams();
-      if (dateFrom) {
-        const finalDateFrom = `${dateFrom} ${startTime ? `${startTime}:00` : "00:00:00"}`;
-        const finalDateTo = `${dateTo || dateFrom} ${endTime ? `${endTime}:59` : "23:59:59"}`;
-        params.set("dateFrom", finalDateFrom);
-        params.set("dateTo", finalDateTo);
-      } else {
-        params.set("window", period.value);
-      }
-      const res = await getApiWithAuth(
-        `${POOL_DASHBOARD_SUMMARY}?${params.toString()}`,
-        controller.signal
-      );
-      if (res.cancelled) return;
-      if (res.success && res.data?.summary) {
-        setStats(res.data.summary);
-      } else if (!res.success && !res.redirecting) {
-        toast.error(
-          res.data?.error || res.data?.message || "Failed to load summary."
+
+    // Debounce to prevent excessive requests
+    const timeoutId = setTimeout(() => {
+      const fetchStats = async () => {
+        // Track this request with a timestamp
+        const requestTimestamp = Date.now();
+        latestStatsRequest.current = requestTimestamp;
+
+        const params = new URLSearchParams();
+        if (dateFrom) {
+          const finalDateFrom = `${dateFrom} ${startTime ? `${startTime}:00` : "00:00:00"}`;
+          const finalDateTo = `${dateTo || dateFrom} ${endTime ? `${endTime}:59` : "23:59:59"}`;
+          params.set("dateFrom", finalDateFrom);
+          params.set("dateTo", finalDateTo);
+        } else {
+          params.set("window", period.value);
+        }
+
+        const res = await getApiWithAuth(
+          `${POOL_DASHBOARD_SUMMARY}?${params.toString()}`
         );
-      }
-    };
-    fetchStats();
-    return () => controller.abort();
+
+        // Only update state if this is still the latest request
+        if (requestTimestamp !== latestStatsRequest.current) return;
+
+        if (res.success && res.data?.summary) {
+          setStats(res.data.summary);
+        } else if (!res.success && !res.redirecting) {
+          toast.error(
+            res.data?.error || res.data?.message || "Failed to load summary."
+          );
+        }
+      };
+      fetchStats();
+    }, 300);
+
+    return () => clearTimeout(timeoutId);
   }, [period, dateFrom, dateTo, startTime, endTime]);
 
   useEffect(() => {
     if (!period && !dateFrom) return;
-    const controller = new AbortController();
-    const fetchAgents = async () => {
-      setLoadingAgents(true);
-      const params = new URLSearchParams({
-        page: String(currentPage),
-        limit: "50"
-      });
 
-      if (dateFrom) {
-        const finalDateFrom = `${dateFrom} ${startTime ? `${startTime}:00` : "00:00:00"}`;
-        const finalDateTo = `${dateTo || dateFrom} ${endTime ? `${endTime}:59` : "23:59:59"}`;
-        params.set("dateFrom", finalDateFrom);
-        params.set("dateTo", finalDateTo);
-      } else {
-        params.set("window", period.value);
-      }
+    // Debounce to prevent excessive requests
+    const timeoutId = setTimeout(() => {
+      const fetchAgents = async () => {
+        setLoadingAgents(true);
 
-      const res = await getApiWithAuth(
-        `${POOL_DASHBOARD_LIST}?${params.toString()}`,
-        controller.signal
-      );
-      if (res.cancelled) return;
-      if (res.success && res.data?.data) {
-        setAgents(res.data.data);
-        setPagination({
-          totalCount: res.data.total,
-          pageSize: res.data.limit,
-          totalPages: Math.ceil(res.data.total / res.data.limit),
-          hasPrev: res.data.page > 1,
-          hasNext: res.data.page < Math.ceil(res.data.total / res.data.limit)
-        });
-      } else if (!res.success && !res.redirecting) {
-        toast.error(
-          res.data?.error ||
-            res.data?.message ||
-            "Failed to load dashboard data."
-        );
-      }
-      setLoadingAgents(false);
-    };
-    fetchAgents();
-    return () => controller.abort();
+        // Track this request with a timestamp
+        const requestTimestamp = Date.now();
+        latestAgentsRequest.current = requestTimestamp;
+
+        try {
+          const params = new URLSearchParams({
+            page: String(currentPage),
+            limit: "50"
+          });
+
+          if (dateFrom) {
+            const finalDateFrom = `${dateFrom} ${startTime ? `${startTime}:00` : "00:00:00"}`;
+            const finalDateTo = `${dateTo || dateFrom} ${endTime ? `${endTime}:59` : "23:59:59"}`;
+            params.set("dateFrom", finalDateFrom);
+            params.set("dateTo", finalDateTo);
+          } else {
+            params.set("window", period.value);
+          }
+
+          const res = await getApiWithAuth(
+            `${POOL_DASHBOARD_LIST}?${params.toString()}`
+          );
+
+          // Only update state if this is still the latest request
+          if (requestTimestamp !== latestAgentsRequest.current) {
+            setLoadingAgents(false);
+            return;
+          }
+
+          if (res.success && res.data?.data) {
+            setAgents(res.data.data);
+            setPagination({
+              totalCount: res.data.total,
+              pageSize: res.data.limit,
+              totalPages: Math.ceil(res.data.total / res.data.limit),
+              hasPrev: res.data.page > 1,
+              hasNext: res.data.page < Math.ceil(res.data.total / res.data.limit)
+            });
+          } else if (!res.success && !res.redirecting) {
+            toast.error(
+              res.data?.error ||
+                res.data?.message ||
+                "Failed to load dashboard data."
+            );
+          }
+        } finally {
+          setLoadingAgents(false);
+        }
+      };
+      fetchAgents();
+    }, 300);
+
+    return () => clearTimeout(timeoutId);
   }, [currentPage, dateFrom, dateTo, startTime, endTime, period]);
 
   const filtered = agents.filter(
