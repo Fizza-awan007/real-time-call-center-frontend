@@ -371,7 +371,7 @@ const AgentLeadership = () => {
                           <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
                         </svg>
                         <span className={startTime ? "text-[#1a1d23]" : "text-gray-400"}>
-                          {startTime || "Start time"}
+                          {startTime ? (() => { const [h, m] = startTime.split(":").map(Number); const ampm = h >= 12 ? "PM" : "AM"; const h12 = h === 0 ? 12 : h > 12 ? h - 12 : h; return `${String(h12).padStart(2,"0")}:${String(m).padStart(2,"0")} ${ampm}`; })() : "Start time"}
                         </span>
                       </button>
                       {clockOpen === "start" && (
@@ -420,7 +420,7 @@ const AgentLeadership = () => {
                           <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
                         </svg>
                         <span className={endTime ? "text-[#1a1d23]" : "text-gray-400"}>
-                          {endTime || "End time"}
+                          {endTime ? (() => { const [h, m] = endTime.split(":").map(Number); const ampm = h >= 12 ? "PM" : "AM"; const h12 = h === 0 ? 12 : h > 12 ? h - 12 : h; return `${String(h12).padStart(2,"0")}:${String(m).padStart(2,"0")} ${ampm}`; })() : "End time"}
                         </span>
                       </button>
                       {clockOpen === "end" && (
