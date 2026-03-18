@@ -88,20 +88,19 @@ const AgentLeadership = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [loadingAgents, setLoadingAgents] = useState(false);
 
-  // Track latest request timestamps to prevent race conditions
-  const latestStatsRequest = useRef(0);
-  const latestAgentsRequest = useRef(0);
+  const statsAbortRef = useRef(null);
+  const agentsAbortRef = useRef(null);
 
   useEffect(() => {
     if (!period && !dateFrom) return;
 
-    // Debounce to prevent excessive requests
     const timeoutId = setTimeout(() => {
-      const fetchStats = async () => {
-        // Track this request with a timestamp
-        const requestTimestamp = Date.now();
-        latestStatsRequest.current = requestTimestamp;
+      // Cancel previous stats request
+      if (statsAbortRef.current) statsAbortRef.current.abort();
+      const controller = new AbortController();
+      statsAbortRef.current = controller;
 
+      const fetchStats = async () => {
         const params = new URLSearchParams();
         if (dateFrom) {
           const finalDateFrom = `${dateFrom} ${startTime ? `${startTime}:00` : "00:00:00"}`;
@@ -113,11 +112,11 @@ const AgentLeadership = () => {
         }
 
         const res = await getApiWithAuth(
-          `${POOL_DASHBOARD_SUMMARY}?${params.toString()}`
+          `${POOL_DASHBOARD_SUMMARY}?${params.toString()}`,
+          controller.signal
         );
 
-        // Only update state if this is still the latest request
-        if (requestTimestamp !== latestStatsRequest.current) return;
+        if (res.cancelled) return;
 
         if (res.success && res.data?.summary) {
           setStats(res.data.summary);
@@ -130,20 +129,23 @@ const AgentLeadership = () => {
       fetchStats();
     }, 300);
 
-    return () => clearTimeout(timeoutId);
+    return () => {
+      clearTimeout(timeoutId);
+      if (statsAbortRef.current) statsAbortRef.current.abort();
+    };
   }, [period, dateFrom, dateTo, startTime, endTime]);
 
   useEffect(() => {
     if (!period && !dateFrom) return;
 
-    // Debounce to prevent excessive requests
     const timeoutId = setTimeout(() => {
+      // Cancel previous agents request
+      if (agentsAbortRef.current) agentsAbortRef.current.abort();
+      const controller = new AbortController();
+      agentsAbortRef.current = controller;
+
       const fetchAgents = async () => {
         setLoadingAgents(true);
-
-        // Track this request with a timestamp
-        const requestTimestamp = Date.now();
-        latestAgentsRequest.current = requestTimestamp;
 
         try {
           const params = new URLSearchParams({
@@ -161,14 +163,11 @@ const AgentLeadership = () => {
           }
 
           const res = await getApiWithAuth(
-            `${POOL_DASHBOARD_LIST}?${params.toString()}`
+            `${POOL_DASHBOARD_LIST}?${params.toString()}`,
+            controller.signal
           );
 
-          // Only update state if this is still the latest request
-          if (requestTimestamp !== latestAgentsRequest.current) {
-            setLoadingAgents(false);
-            return;
-          }
+          if (res.cancelled) return;
 
           if (res.success && res.data?.data) {
             setAgents(res.data.data);
@@ -187,13 +186,16 @@ const AgentLeadership = () => {
             );
           }
         } finally {
-          setLoadingAgents(false);
+          if (!controller.signal.aborted) setLoadingAgents(false);
         }
       };
       fetchAgents();
     }, 300);
 
-    return () => clearTimeout(timeoutId);
+    return () => {
+      clearTimeout(timeoutId);
+      if (agentsAbortRef.current) agentsAbortRef.current.abort();
+    };
   }, [currentPage, dateFrom, dateTo, startTime, endTime, period]);
 
   const filtered = agents.filter(
