@@ -1,8 +1,8 @@
 import axios from "axios";
 import { getAccessToken } from "./localStorage";
+import { clearAuthAndRedirect, isJwtExpired } from "./auth";
 
 export const BASE_URL = import.meta.env.VITE_BACKEND_URL;
-console.log("base url", BASE_URL);
 axios.defaults.baseURL = BASE_URL;
 axios.defaults.timeout = 300000;
 
@@ -18,13 +18,16 @@ export const postAPIWithoutAuth = async (url, body) => {
       headers: res.headers
     };
   } catch (err) {
-    return { data: err.response.data, success: false };
+    return { data: err?.response?.data || { message: err?.message }, success: false };
   }
 };
 
 export const postAPIWithAuth = async (url, body, headers) => {
   try {
-    await setApiHeader();
+    const shouldContinue = await setApiHeader();
+    if (!shouldContinue) {
+      return { success: false, redirecting: true };
+    }
     let res = {};
     if (headers) {
       res = await axios.post(url, body, { headers });
@@ -33,14 +36,16 @@ export const postAPIWithAuth = async (url, body, headers) => {
     }
     return { data: res.data, status: res.status, success: true };
   } catch (err) {
-    console.log(err, "err");
-    return { data: err.response.data, success: false };
+    return { data: err?.response?.data || { message: err?.message }, success: false };
   }
 };
 
 export const putAPIWithAuth = async (url, body, headers) => {
   try {
-    await setApiHeader();
+    const shouldContinue = await setApiHeader();
+    if (!shouldContinue) {
+      return { success: false, redirecting: true };
+    }
     let res = {};
     if (headers) {
       res = await axios.put(url, body, { headers });
@@ -49,8 +54,7 @@ export const putAPIWithAuth = async (url, body, headers) => {
     }
     return { data: res.data, status: res.status, success: true };
   } catch (err) {
-    console.log(err, "err");
-    return { data: err.response.data, success: false };
+    return { data: err?.response?.data || { message: err?.message }, success: false };
   }
 };
 
@@ -66,7 +70,10 @@ export const putAPIWithAuth = async (url, body, headers) => {
 
 export const getApiWithAuth = async (url, signal) => {
   try {
-    await setApiHeader();
+    const shouldContinue = await setApiHeader();
+    if (!shouldContinue) {
+      return { success: false, redirecting: true };
+    }
     const res = await axios.get(url, { signal });
     return { data: res?.data, status: res.status, success: true };
   } catch (err) {
@@ -86,13 +93,16 @@ export const getApiWithAuth = async (url, signal) => {
       return { success: false, redirecting: true };
     }
 
-    return { data: err?.response?.data, success: false };
+    return { data: err?.response?.data || { message: err?.message }, success: false };
   }
 };
 
 export const patchApiWithAuth = async (url, body, headers) => {
   try {
-    await setApiHeader();
+    const shouldContinue = await setApiHeader();
+    if (!shouldContinue) {
+      return { success: false, redirecting: true };
+    }
     let res = {};
     if (headers) {
       res = await axios.patch(url, body, { headers });
@@ -101,25 +111,31 @@ export const patchApiWithAuth = async (url, body, headers) => {
     }
     return { data: res.data, status: res.status, success: true };
   } catch (err) {
-    console.log(err, "err");
-    return { data: err.response.data, success: false };
+    return { data: err?.response?.data || { message: err?.message }, success: false };
   }
 };
 
 export const deleteApi = async (url) => {
   try {
-    await setApiHeader();
+    const shouldContinue = await setApiHeader();
+    if (!shouldContinue) {
+      return { success: false, redirecting: true };
+    }
     const res = await axios.delete(url);
     return { data: res.data, status: res.status, success: true };
   } catch (err) {
-    return { data: err.response.data, success: false };
+    return { data: err?.response?.data || { message: err?.message }, success: false };
   }
 };
 
 const setApiHeader = async () => {
   const token = await getAccessToken();
-  console.log("------token", token);
+  if (isJwtExpired(token)) {
+    clearAuthAndRedirect();
+    return false;
+  }
   axios.defaults.headers.common.Authorization = `Bearer ${token}`;
+  return true;
 };
 
 const RemoveApiHeader = () => {
@@ -136,7 +152,5 @@ export const isTokenExpiredError = (error) => {
 };
 
 export const logout = () => {
-  localStorage.removeItem("access_token");
-  localStorage.removeItem("refresh_token");
-  window.location.href = "/login";
+  clearAuthAndRedirect();
 };
