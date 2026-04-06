@@ -1,12 +1,34 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import toast from "react-hot-toast";
 import RTInput from "../../common-components/RTInput";
 import RTButton from "../../common-components/RTButton";
+import { postAPIWithoutAuth, getApiWithAuth } from "../../../utils/api";
+import { AUTH_LOGIN, AUTH_ME } from "../../../utils/apiUrls";
+
+const extractAccessToken = (data) =>
+  data?.access_token ||
+  data?.access ||
+  data?.token ||
+  data?.data?.access_token ||
+  data?.data?.access ||
+  data?.data?.token ||
+  null;
+
+const extractUser = (data) =>
+  data?.user ||
+  data?.data?.user ||
+  data?.profile ||
+  data?.data?.profile ||
+  data?.data ||
+  data ||
+  null;
 
 const RTLogin = () => {
   const navigate = useNavigate();
   const [form, setForm] = useState({ email: "", password: "" });
   const [errors, setErrors] = useState({});
+  const [loading, setLoading] = useState(false);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -22,15 +44,64 @@ const RTLogin = () => {
     return errs;
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     const errs = validate();
     if (Object.keys(errs).length) {
       setErrors(errs);
       return;
     }
-    localStorage.setItem("access_token", "mock_token");
-    navigate("/home");
+
+    setLoading(true);
+    try {
+      const payload = {
+        email: form.email,
+        password: form.password
+      };
+
+      const loginRes = await postAPIWithoutAuth(AUTH_LOGIN, payload);
+
+      if (!loginRes.success) {
+        toast.error(
+          loginRes.data?.error ||
+            loginRes.data?.message ||
+            "Login failed. Please check your credentials."
+        );
+        return;
+      }
+
+      const accessToken = extractAccessToken(loginRes.data);
+      if (!accessToken) {
+        toast.error("Login succeeded but no access token was returned.");
+        return;
+      }
+
+      localStorage.setItem("access_token", accessToken);
+
+      const meRes = await getApiWithAuth(AUTH_ME);
+      const user = meRes.success ? extractUser(meRes.data) : null;
+
+      if (user) {
+        const userName =
+          user.name ||
+          user.full_name ||
+          user.fullName ||
+          user.username ||
+          user.email ||
+          "";
+
+        if (userName) {
+          localStorage.setItem("user_name", userName);
+        }
+        localStorage.setItem("user", JSON.stringify(user));
+      }
+
+      navigate("/home");
+    } catch {
+      toast.error("Something went wrong while signing in.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -82,8 +153,8 @@ const RTLogin = () => {
             onChange={handleChange}
             error={errors.password}
           />
-          <RTButton type="submit" fullWidth>
-            Sign in
+          <RTButton type="submit" fullWidth disabled={loading}>
+            {loading ? "Signing in..." : "Sign in"}
           </RTButton>
         </form>
       </div>

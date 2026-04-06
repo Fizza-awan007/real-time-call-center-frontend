@@ -14,7 +14,8 @@ import {
 import { getApiWithAuth } from "../../../utils/api";
 import {
   POOL_DASHBOARD_SUMMARY,
-  POOL_DASHBOARD_LIST
+  POOL_DASHBOARD_LIST,
+  CALLTOOLS_SUMMARY
 } from "../../../utils/apiUrls";
 
 const PERIOD_OPTIONS = [
@@ -23,6 +24,20 @@ const PERIOD_OPTIONS = [
   { label: "60 minutes", value: "1h" },
   { label: "7 days", value: "7d" }
   // { label: "30 days", value: "30d" }
+];
+
+const CALLTOOLS_PERIOD_OPTIONS = [
+  { label: "15 minutes", value: "15m" },
+  { label: "60 minutes", value: "1h" },
+  { label: "24 hours", value: "24h" }
+];
+
+const GATEWAY_OPTIONS = [
+  { label: "Gateway 1", value: "gateway-1" },
+  { label: "Gateway 2", value: "gateway-2" },
+  { label: "Gateway 3", value: "gateway-3" },
+  { label: "All Gateways", value: "all-gateways" },
+  { label: "Call Tools", value: "call-tools" }
 ];
 
 const MedalIcon = ({ rank }) => {
@@ -72,10 +87,70 @@ const formatDuration = (seconds) => {
   return `${m}:${s.toString().padStart(2, "0")}`;
 };
 
+const formatSecondsValue = (value) => {
+  if (value === null || value === undefined || value === "") return "—";
+  const numeric = Number(value);
+  if (Number.isNaN(numeric)) return String(value);
+  return numeric.toFixed(2);
+};
+
+const formatPercentValue = (value, allowRatio = false) => {
+  if (value === null || value === undefined || value === "") return "—";
+  const numeric = Number(value);
+  if (Number.isNaN(numeric)) return String(value);
+  const percent = allowRatio && numeric <= 1 ? numeric * 100 : numeric;
+  return `${Number.isInteger(percent) ? percent : percent.toFixed(2)}%`;
+};
+
+const toUtcIsoString = (date, time, isEndOfDay = false) => {
+  if (!date) return "";
+
+  const [year, month, day] = date.split("-").map(Number);
+  const [hour = 0, minute = 0] = time ? time.split(":").map(Number) : [];
+
+  const localDate = new Date(
+    year,
+    (month || 1) - 1,
+    day || 1,
+    hour,
+    minute,
+    isEndOfDay ? 59 : 0,
+    isEndOfDay ? 999 : 0
+  );
+
+  return localDate.toISOString();
+};
+
+const normalizeSummary = (data, isCallTools) => {
+  if (!data) return null;
+
+  if (isCallTools) {
+    return {
+      totalDials: data.totalDials ?? 0,
+      totalConnected: data.totalConnected ?? 0,
+      totalQualityConnected: data.totalQualityConnected ?? 0,
+      totalTransfers: data.totalTransfers ?? 0,
+      transferRate: data.transferRate ?? 0,
+      averageDuration: data.average_duration ?? 0
+    };
+  }
+
+  return {
+    totalDials: data.total_dials ?? 0,
+    totalConnected: data.connects ?? 0,
+    totalQualityConnected: null,
+    totalTransfers: null,
+    transferRate: data.connect_rate ?? 0,
+    averageDuration: data.avg_duration ?? 0
+  };
+};
+
 const AgentLeadership = () => {
   const [period, setPeriod] = useState(PERIOD_OPTIONS[0]);
+  const [gateway, setGateway] = useState(GATEWAY_OPTIONS[3]);
   const [search, setSearch] = useState("");
   const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [gatewayDropdownOpen, setGatewayDropdownOpen] = useState(false);
   const [stats, setStats] = useState(null);
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
@@ -90,6 +165,33 @@ const AgentLeadership = () => {
 
   const statsAbortRef = useRef(null);
   const agentsAbortRef = useRef(null);
+  const isCallTools = gateway.value === "call-tools";
+  const visiblePeriodOptions = isCallTools ? CALLTOOLS_PERIOD_OPTIONS : PERIOD_OPTIONS;
+
+  const resolveSummaryEndpoint = () =>
+    isCallTools ? CALLTOOLS_SUMMARY : POOL_DASHBOARD_SUMMARY;
+
+  const resolvePeriodValue = () => {
+    if (!isCallTools) {
+      return period?.value;
+    }
+
+    if (period?.value === "7d") {
+      return "24h";
+    }
+
+    return period?.value;
+  };
+
+  useEffect(() => {
+    if (gateway.value === "call-tools" && period.value === "7d") {
+      setPeriod(CALLTOOLS_PERIOD_OPTIONS[2]);
+    }
+
+    if (gateway.value !== "call-tools" && period.value === "24h") {
+      setPeriod(PERIOD_OPTIONS[2]);
+    }
+  }, [gateway, period]);
 
   useEffect(() => {
     if (!period && !dateFrom) return;
@@ -102,24 +204,29 @@ const AgentLeadership = () => {
 
       const fetchStats = async () => {
         const params = new URLSearchParams();
+        setStats(null);
         if (dateFrom) {
-          const finalDateFrom = `${dateFrom} ${startTime ? `${startTime}:00` : "00:00:00"}`;
-          const finalDateTo = `${dateTo || dateFrom} ${endTime ? `${endTime}:59` : "23:59:59"}`;
+          const finalDateFrom = toUtcIsoString(dateFrom, startTime, false);
+          const finalDateTo = toUtcIsoString(
+            dateTo || dateFrom,
+            endTime || "23:59",
+            true
+          );
           params.set("dateFrom", finalDateFrom);
           params.set("dateTo", finalDateTo);
         } else {
-          params.set("window", period.value);
+          params.set("window", resolvePeriodValue());
         }
 
         const res = await getApiWithAuth(
-          `${POOL_DASHBOARD_SUMMARY}?${params.toString()}`,
+          `${resolveSummaryEndpoint()}?${params.toString()}`,
           controller.signal
         );
 
         if (res.cancelled) return;
 
-        if (res.success && res.data?.summary) {
-          setStats(res.data.summary);
+        if (res.success && (res.data?.summary || res.data?.ok)) {
+          setStats(normalizeSummary(res.data?.summary || res.data, isCallTools));
         } else if (!res.success && !res.redirecting) {
           toast.error(
             res.data?.error || res.data?.message || "Failed to load summary."
@@ -133,7 +240,7 @@ const AgentLeadership = () => {
       clearTimeout(timeoutId);
       if (statsAbortRef.current) statsAbortRef.current.abort();
     };
-  }, [period, dateFrom, dateTo, startTime, endTime]);
+  }, [period, dateFrom, dateTo, startTime, endTime, gateway]);
 
   useEffect(() => {
     if (!period && !dateFrom) return;
@@ -154,12 +261,16 @@ const AgentLeadership = () => {
           });
 
           if (dateFrom) {
-            const finalDateFrom = `${dateFrom} ${startTime ? `${startTime}:00` : "00:00:00"}`;
-            const finalDateTo = `${dateTo || dateFrom} ${endTime ? `${endTime}:59` : "23:59:59"}`;
+            const finalDateFrom = toUtcIsoString(dateFrom, startTime, false);
+            const finalDateTo = toUtcIsoString(
+              dateTo || dateFrom,
+              endTime || "23:59",
+              true
+            );
             params.set("dateFrom", finalDateFrom);
             params.set("dateTo", finalDateTo);
           } else {
-            params.set("window", period.value);
+            params.set("window", resolvePeriodValue());
           }
 
           const res = await getApiWithAuth(
@@ -196,7 +307,7 @@ const AgentLeadership = () => {
       clearTimeout(timeoutId);
       if (agentsAbortRef.current) agentsAbortRef.current.abort();
     };
-  }, [currentPage, dateFrom, dateTo, startTime, endTime, period]);
+  }, [currentPage, dateFrom, dateTo, startTime, endTime, period, gateway]);
 
   const filtered = agents.filter(
     (a) =>
@@ -211,6 +322,72 @@ const AgentLeadership = () => {
   const showingEnd = pagination
     ? Math.min(currentPage * pageSize, totalCount)
     : 0;
+
+  const statsCards = isCallTools
+    ? [
+        {
+          label: "Total Dials",
+          value: stats?.totalDials ?? "—",
+          iconBgClass: "bg-blue-50",
+          icon: <CallIcon width={28} height={28} className="text-blue-500" />
+        },
+        {
+          label: "Total Connected",
+          value: stats?.totalConnected ?? "—",
+          iconBgClass: "bg-emerald-50",
+          icon: <TimeIcon width={28} height={28} className="text-emerald-500" />
+        },
+        {
+          label: "Total Quality Connected",
+          value: stats?.totalQualityConnected ?? "—",
+          iconBgClass: "bg-purple-50",
+          icon: <GraphIcon width={28} height={28} className="text-purple-500" />
+        },
+        {
+          label: "Total Transfers",
+          value: stats?.totalTransfers ?? "—",
+          iconBgClass: "bg-orange-50",
+          icon: <GroupIcon width={28} height={28} className="text-orange-500" />
+        },
+        {
+          label: "Transfer Rate",
+          value: formatPercentValue(stats?.transferRate, true),
+          iconBgClass: "bg-amber-50",
+          icon: <CalenderIcon width={28} height={28} className="text-amber-500" />
+        },
+        {
+          label: "Average Duration (sec)",
+          value: formatSecondsValue(stats?.averageDuration),
+          iconBgClass: "bg-sky-50",
+          icon: <ChaveronIcon width={28} height={28} className="text-sky-500" />
+        }
+      ]
+    : [
+        {
+          label: "Total Dials",
+          value: stats?.totalDials ?? "—",
+          iconBgClass: "bg-blue-50",
+          icon: <CallIcon width={28} height={28} className="text-blue-500" />
+        },
+        {
+          label: "Connects",
+          value: stats?.totalConnected ?? "—",
+          iconBgClass: "bg-emerald-50",
+          icon: <TimeIcon width={28} height={28} className="text-emerald-500" />
+        },
+        {
+          label: "Connect Rate",
+          value: formatPercentValue(stats?.transferRate, true),
+          iconBgClass: "bg-purple-50",
+          icon: <GraphIcon width={28} height={28} className="text-purple-500" />
+        },
+        {
+          label: "Avg Duration (sec)",
+          value: formatSecondsValue(stats?.averageDuration),
+          iconBgClass: "bg-orange-50",
+          icon: <GroupIcon width={28} height={28} className="text-orange-500" />
+        }
+      ];
 
   const getPageNumbers = () => {
     const pages = [];
@@ -237,56 +414,27 @@ const AgentLeadership = () => {
           </h1>
         </div>
 
-        <div className="mb-7 grid gap-5 sm:grid-cols-2 xl:grid-cols-4">
-          <StatCard
-            label="Total Dials"
-            value={stats ? stats.total_dials.toLocaleString() : "—"}
-            iconBgClass="bg-blue-50"
-            icon={<CallIcon width={28} height={28} className="text-blue-500" />}
-          />
-          <StatCard
-            label="Connects"
-            value={stats ? stats.connects.toLocaleString() : "—"}
-            iconBgClass="bg-emerald-50"
-            icon={
-              <TimeIcon width={28} height={28} className="text-emerald-500" />
-            }
-          />
-          <StatCard
-            label="Connect Rate"
-            value={
-              stats
-                ? `${stats.connect_rate === 100 ? "100" : Number(stats.connect_rate).toFixed(2)}%`
-                : "—"
-            }
-            iconBgClass="bg-purple-50"
-            icon={
-              <GraphIcon width={28} height={28} className="text-purple-500" />
-            }
-          />
-          <StatCard
-            label="Avg Duration (sec)"
-            value={stats ? stats.avg_duration : "—"}
-            iconBgClass="bg-orange-50"
-            icon={
-              <GroupIcon width={28} height={28} className="text-orange-500" />
-            }
-          />
+        <div className={`mb-7 grid gap-5 sm:grid-cols-2 ${isCallTools ? "xl:grid-cols-3" : "xl:grid-cols-4"}`}>
+          {statsCards.map((card) => (
+            <StatCard
+              key={card.label}
+              label={card.label}
+              value={card.value}
+              iconBgClass={card.iconBgClass}
+              icon={card.icon}
+            />
+          ))}
         </div>
 
         <div className="rounded-xl bg-white shadow-[0_1px_4px_rgba(0,0,0,0.05)]">
           <div className="border-b border-gray-100 px-4 pb-5 pt-6 sm:px-7">
-            <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <h1 className="font-urbanist text-[18px] font-semibold leading-[150%] text-[#1a1d23] sm:text-[24px]">
+            <div className="mb-4 flex flex-col gap-3">
+              <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between md:gap-4 xl:flex-nowrap">
+                <h1 className="whitespace-nowrap font-urbanist text-[18px] font-semibold leading-[150%] text-[#1a1d23] sm:text-[24px]">
                   Performance Rankings
                 </h1>
-              </div>
 
-              {/* Desktop: search + filter in one row; Mobile: search row1, filter row2 */}
-              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3 sm:ml-auto">
-                {/* Search */}
-                <div className="relative flex items-center">
+                <div className="relative flex w-full items-center md:w-auto">
                   <svg
                     className="pointer-events-none absolute left-3"
                     width="16"
@@ -309,80 +457,25 @@ const AgentLeadership = () => {
                     />
                   </svg>
                   <input
-                    className="h-[38px] w-full rounded-[20px] border border-gray-200 bg-gray-50 px-3.5 pl-9 text-[13px] text-[#1a1d23] outline-none transition-colors placeholder:text-gray-400 focus:border-indigo-500 focus:bg-white sm:w-[220px]"
+                    className="h-[38px] w-full rounded-[20px] border border-gray-200 bg-gray-50 px-3.5 pl-9 text-[13px] text-[#1a1d23] outline-none transition-colors placeholder:text-gray-400 focus:border-indigo-500 focus:bg-white md:w-[180px] lg:w-[240px]"
                     type="text"
                     placeholder="Search pool name..."
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
                   />
                 </div>
-
-                {/* Period filter */}
-                <div className="flex items-center gap-2 text-[13px] text-gray-500">
-                  <CalenderIcon width={15} height={15} />
-                  <span className="font-medium text-gray-700">Period:</span>
-                  <div className="relative">
-                    <button
-                      type="button"
-                      className="flex h-9 w-[120px] items-center justify-between gap-1.5 rounded-lg border border-gray-200 bg-white px-3.5 text-[13px] font-medium text-gray-700 transition-colors hover:border-gray-300"
-                      onClick={() => setDropdownOpen((o) => !o)}
-                    >
-                      {period ? period.label : "Period"}
-                      <svg
-                        width="12"
-                        height="12"
-                        viewBox="0 0 12 12"
-                        fill="none"
-                      >
-                        <path
-                          d="M3 4.5L6 7.5L9 4.5"
-                          stroke="#374151"
-                          strokeWidth="1.5"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        />
-                      </svg>
-                    </button>
-                    {dropdownOpen && (
-                      <div className="absolute right-0 top-[calc(100%+4px)] z-50 w-full overflow-hidden rounded-lg border border-gray-200 bg-white shadow-[0_4px_16px_rgba(0,0,0,0.1)]">
-                        {PERIOD_OPTIONS.map((option) => (
-                          <button
-                            key={option.value}
-                            type="button"
-                            className={`block w-full px-3.5 py-[9px] text-left text-[13px] transition-colors hover:bg-gray-50 ${
-                              period && option.value === period.value
-                                ? "bg-indigo-50 font-semibold text-indigo-500"
-                                : "text-gray-700"
-                            }`}
-                            onClick={() => {
-                              setPeriod(option);
-                              setCurrentPage(1);
-                              setDateFrom("");
-                              setDateTo("");
-                              setStartTime("");
-                              setEndTime("");
-                              setDropdownOpen(false);
-                            }}
-                          >
-                            {option.label}
-                          </button>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                </div>
               </div>
-            </div>
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-              <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
-                <div className="flex flex-col gap-1.5 sm:flex-row sm:items-center sm:gap-2">
+
+              <div className="flex flex-col gap-3 xl:flex-row xl:items-start xl:justify-between xl:gap-4">
+                <div className="flex flex-col gap-3 md:order-2 md:flex-row md:flex-wrap md:items-center md:gap-3 xl:order-1">
+                  <div className="flex flex-col gap-1.5 sm:flex-row sm:items-center sm:gap-2">
                   <label
                     htmlFor="date-from"
                     className="text-[13px] font-medium text-gray-700"
                   >
                     From
                   </label>
-                  <div className="flex flex-col gap-2 min-[400px]:flex-row min-[400px]:items-center">
+                  <div className="flex w-full flex-col gap-1.5 min-[400px]:flex-row min-[400px]:items-center">
                     <input
                       id="date-from"
                       type="date"
@@ -423,15 +516,15 @@ const AgentLeadership = () => {
                       )}
                     </div>
                   </div>
-                </div>
-                <div className="flex flex-col gap-1.5 sm:flex-row sm:items-center sm:gap-2">
+                  </div>
+                  <div className="flex flex-col gap-1.5 sm:flex-row sm:items-center sm:gap-2">
                   <label
                     htmlFor="date-to"
                     className="text-[13px] font-medium text-gray-700"
                   >
                     To
                   </label>
-                  <div className="flex flex-col gap-2 min-[400px]:flex-row min-[400px]:items-center">
+                  <div className="flex w-full flex-col gap-1.5 min-[400px]:flex-row min-[400px]:items-center">
                     <input
                       id="date-to"
                       type="date"
@@ -473,39 +566,152 @@ const AgentLeadership = () => {
                     </div>
                   </div>
                 </div>
+                </div>
+
+                <div className="flex flex-col gap-3 md:order-1 md:flex-row md:flex-wrap md:items-center md:justify-end md:gap-4 xl:order-2">
+                  <div className="flex min-w-0 flex-none items-center gap-2 text-[13px] text-gray-500 md:justify-end">
+                    <CalenderIcon width={15} height={15} />
+                    <span className="font-medium text-gray-700">Period:</span>
+                    <div className="relative">
+                      <button
+                        type="button"
+                        className="flex h-9 w-[140px] items-center justify-between gap-1.5 rounded-lg border border-gray-200 bg-white px-3.5 text-[13px] font-medium text-gray-700 transition-colors hover:border-gray-300 sm:w-[140px]"
+                        onClick={() => setDropdownOpen((o) => !o)}
+                      >
+                        {period ? period.label : "Period"}
+                        <svg
+                          width="12"
+                          height="12"
+                          viewBox="0 0 12 12"
+                          fill="none"
+                        >
+                          <path
+                            d="M3 4.5L6 7.5L9 4.5"
+                            stroke="#374151"
+                            strokeWidth="1.5"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          />
+                        </svg>
+                      </button>
+                      {dropdownOpen && (
+                        <div className="absolute right-0 top-[calc(100%+4px)] z-50 w-full overflow-hidden rounded-lg border border-gray-200 bg-white shadow-[0_4px_16px_rgba(0,0,0,0.1)]">
+                          {visiblePeriodOptions.map((option) => (
+                            <button
+                              key={option.value}
+                              type="button"
+                              className={`block w-full px-3.5 py-[9px] text-left text-[13px] transition-colors hover:bg-gray-50 ${
+                                period && option.value === period.value
+                                  ? "bg-indigo-50 font-semibold text-indigo-500"
+                                  : "text-gray-700"
+                              }`}
+                              onClick={() => {
+                                setPeriod(option);
+                                setCurrentPage(1);
+                                setDateFrom("");
+                                setDateTo("");
+                                setStartTime("");
+                                setEndTime("");
+                                setDropdownOpen(false);
+                              }}
+                            >
+                              {option.label}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="flex min-w-0 flex-none items-center gap-2 text-[13px] text-gray-500 md:justify-end md:ml-0">
+                    <span className="font-medium text-gray-700">Gateway:</span>
+                    <div className="relative">
+                      <button
+                        type="button"
+                        className="flex h-9 w-[140px] items-center justify-between gap-1.5 rounded-lg border border-gray-200 bg-white px-3.5 text-[13px] font-medium text-gray-700 transition-colors hover:border-gray-300 sm:w-[140px]"
+                        onClick={() => setGatewayDropdownOpen((o) => !o)}
+                      >
+                        {gateway ? gateway.label : "Gateway"}
+                        <svg
+                          width="12"
+                          height="12"
+                          viewBox="0 0 12 12"
+                          fill="none"
+                        >
+                          <path
+                            d="M3 4.5L6 7.5L9 4.5"
+                            stroke="#374151"
+                            strokeWidth="1.5"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          />
+                        </svg>
+                      </button>
+                      {gatewayDropdownOpen && (
+                        <div className="absolute right-0 top-[calc(100%+4px)] z-50 w-full overflow-hidden rounded-lg border border-gray-200 bg-white shadow-[0_4px_16px_rgba(0,0,0,0.1)]">
+                          {GATEWAY_OPTIONS.map((option) => (
+                            <button
+                              key={option.value}
+                              type="button"
+                              className={`block w-full px-3.5 py-[9px] text-left text-[13px] transition-colors hover:bg-gray-50 ${
+                                gateway && option.value === gateway.value
+                                  ? "bg-indigo-50 font-semibold text-indigo-500"
+                                  : "text-gray-700"
+                              }`}
+                              onClick={() => {
+                                setGateway(option);
+                                setCurrentPage(1);
+                                setGatewayDropdownOpen(false);
+                                setDropdownOpen(false);
+                                if (option.value === "call-tools" && period.value === "7d") {
+                                  setPeriod(CALLTOOLS_PERIOD_OPTIONS[2]);
+                                }
+                                if (option.value !== "call-tools" && period.value === "24h") {
+                                  setPeriod(PERIOD_OPTIONS[2]);
+                                }
+                              }}
+                            >
+                              {option.label}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
 
           <div className="overflow-x-auto rounded-b-xl">
-            <table className="w-full border-collapse">
+            <table className="min-w-[1080px] w-full border-collapse">
               <thead>
                 <tr>
-                  <th className="w-16 border-b border-gray-100 px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-[0.6px] text-[#45556C] font-urbanist sm:px-7">
+                  <th className="w-16 border-b border-gray-100 px-3 py-3 text-left text-[11px] font-semibold uppercase tracking-[0.6px] text-[#45556C] font-urbanist sm:px-7">
                     #
                   </th>
-                  <th className="border-b border-gray-100 px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-[0.6px] text-[#45556C] font-urbanist sm:px-7">
+                  <th className="border-b border-gray-100 px-3 py-3 text-left text-[11px] font-semibold uppercase tracking-[0.6px] text-[#45556C] font-urbanist sm:px-7">
                     Pool Name
                   </th>
-                  <th className="border-b border-gray-100 px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-[0.6px] text-[#45556C] font-urbanist sm:px-7">
+                  <th className="border-b border-gray-100 px-3 py-3 text-left text-[11px] font-semibold uppercase tracking-[0.6px] text-[#45556C] font-urbanist sm:px-7">
                     Platform
                   </th>
-                  <th className="border-b border-gray-100 px-4 py-3 text-center text-[11px] font-semibold uppercase tracking-[0.6px] text-[#45556C] font-urbanist sm:px-7">
+                  <th className="border-b border-gray-100 px-3 py-3 text-center text-[11px] font-semibold uppercase tracking-[0.6px] text-[#45556C] font-urbanist sm:px-7">
                     Transfers
                   </th>
-                  <th className="border-b border-gray-100 px-4 py-3 text-center text-[11px] font-semibold uppercase tracking-[0.6px] text-[#45556C] font-urbanist sm:px-7">
+                  <th className="border-b border-gray-100 px-3 py-3 text-center text-[11px] font-semibold uppercase tracking-[0.6px] text-[#45556C] font-urbanist sm:px-7">
                     Transfer Rate
                   </th>
-                  <th className="border-b border-gray-100 px-4 py-3 text-center text-[11px] font-semibold uppercase tracking-[0.6px] text-[#45556C] font-urbanist sm:px-7">
+                  <th className="border-b border-gray-100 px-3 py-3 text-center text-[11px] font-semibold uppercase tracking-[0.6px] text-[#45556C] font-urbanist sm:px-7">
                     Total Dials
                   </th>
-                  <th className="border-b border-gray-100 px-4 py-3 text-center text-[11px] font-semibold uppercase tracking-[0.6px] text-[#45556C] font-urbanist sm:px-7">
+                  <th className="border-b border-gray-100 px-3 py-3 text-center text-[11px] font-semibold uppercase tracking-[0.6px] text-[#45556C] font-urbanist sm:px-7">
                     Connects
                   </th>
-                  <th className="border-b border-gray-100 px-4 py-3 text-center text-[11px] font-semibold uppercase tracking-[0.6px] text-[#45556C] font-urbanist sm:px-7">
+                  <th className="border-b border-gray-100 px-3 py-3 text-center text-[11px] font-semibold uppercase tracking-[0.6px] text-[#45556C] font-urbanist sm:px-7">
                     Connect Rate
                   </th>
-                  <th className="border-b border-gray-100 px-4 py-3 text-center text-[11px] font-semibold uppercase tracking-[0.6px] text-[#45556C] font-urbanist sm:px-7">
+                  <th className="border-b border-gray-100 px-3 py-3 text-center text-[11px] font-semibold uppercase tracking-[0.6px] text-[#45556C] font-urbanist sm:px-7">
                     Avg Duration
                   </th>
 
