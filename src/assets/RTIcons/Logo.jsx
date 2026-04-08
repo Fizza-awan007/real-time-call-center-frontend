@@ -6,7 +6,6 @@ const LogoIcon = ({ width = 127, height = 39 }) =>
     xmlnsXlink="http://www.w3.org/1999/xlink"
     width={width}
     height={height}
-    xw
     fill="none"
     viewBox="0 0 127 39"
   >

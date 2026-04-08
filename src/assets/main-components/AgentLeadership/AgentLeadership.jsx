@@ -29,7 +29,7 @@ const PERIOD_OPTIONS = [
 const CALLTOOLS_PERIOD_OPTIONS = [
   { label: "15 minutes", value: "15m" },
   { label: "60 minutes", value: "1h" },
-  { label: "24 hours", value: "24h" }
+  { label: "7 days", value: "7d" }
 ];
 
 const GATEWAY_OPTIONS = [
@@ -165,33 +165,23 @@ const AgentLeadership = () => {
 
   const statsAbortRef = useRef(null);
   const agentsAbortRef = useRef(null);
-  const isCallTools = gateway.value === "call-tools";
+  const gatewayValue = gateway?.value;
+  const periodValue = period?.value;
+  const isCallTools = gatewayValue === "call-tools";
   const visiblePeriodOptions = isCallTools ? CALLTOOLS_PERIOD_OPTIONS : PERIOD_OPTIONS;
 
   const resolveSummaryEndpoint = () =>
     isCallTools ? CALLTOOLS_SUMMARY : POOL_DASHBOARD_SUMMARY;
 
   const resolvePeriodValue = () => {
-    if (!isCallTools) {
-      return period?.value;
-    }
-
-    if (period?.value === "7d") {
-      return "24h";
-    }
-
-    return period?.value;
+    return periodValue;
   };
 
   useEffect(() => {
-    if (gateway.value === "call-tools" && period.value === "7d") {
-      setPeriod(CALLTOOLS_PERIOD_OPTIONS[2]);
+    if (periodValue === "24h") {
+      setPeriod(PERIOD_OPTIONS[3]);
     }
-
-    if (gateway.value !== "call-tools" && period.value === "24h") {
-      setPeriod(PERIOD_OPTIONS[2]);
-    }
-  }, [gateway, period]);
+  }, [gatewayValue, periodValue]);
 
   useEffect(() => {
     if (!period && !dateFrom) return;
@@ -663,11 +653,8 @@ const AgentLeadership = () => {
                                 setCurrentPage(1);
                                 setGatewayDropdownOpen(false);
                                 setDropdownOpen(false);
-                                if (option.value === "call-tools" && period.value === "7d") {
-                                  setPeriod(CALLTOOLS_PERIOD_OPTIONS[2]);
-                                }
-                                if (option.value !== "call-tools" && period.value === "24h") {
-                                  setPeriod(PERIOD_OPTIONS[2]);
+                                if (option.value !== "call-tools" && periodValue === "24h") {
+                                  setPeriod(PERIOD_OPTIONS[3]);
                                 }
                               }}
                             >
@@ -747,7 +734,7 @@ const AgentLeadership = () => {
                       1;
                     return (
                       <tr
-                        key={agent._id}
+                        key={agent._id ?? `${agent.pool_name ?? "agent"}-${idx}`}
                         className="border-b border-gray-50 transition-colors last:border-b-0 hover:bg-gray-50/60"
                       >
                         <td className="px-4 py-4 align-middle text-sm text-[#1a1d23] sm:px-7">
