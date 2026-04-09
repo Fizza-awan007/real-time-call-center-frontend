@@ -107,18 +107,14 @@ const toUtcIsoString = (date, time, isEndOfDay = false) => {
 
   const [year, month, day] = date.split("-").map(Number);
   const [hour = 0, minute = 0] = time ? time.split(":").map(Number) : [];
+  const second = isEndOfDay ? 59 : 0;
+  const millisecond = isEndOfDay ? 999 : 0;
 
-  const localDate = new Date(
-    year,
-    (month || 1) - 1,
-    day || 1,
-    hour,
-    minute,
-    isEndOfDay ? 59 : 0,
-    isEndOfDay ? 999 : 0
-  );
+  const pad = (value) => String(value).padStart(2, "0");
 
-  return localDate.toISOString();
+  return `${year}-${pad(month || 1)}-${pad(day || 1)}T${pad(
+    hour
+  )}:${pad(minute)}:${pad(second)}.${String(millisecond).padStart(3, "0")}Z`;
 };
 
 const normalizeSummary = (data, isCallTools) => {
@@ -306,12 +302,6 @@ const AgentLeadership = () => {
   );
 
   const totalPages = pagination?.totalPages ?? 1;
-  const totalCount = pagination?.totalCount ?? 0;
-  const pageSize = pagination?.pageSize ?? 0;
-  const showingStart = pagination ? (currentPage - 1) * pageSize + 1 : 0;
-  const showingEnd = pagination
-    ? Math.min(currentPage * pageSize, totalCount)
-    : 0;
 
   const statsCards = isCallTools
     ? [
