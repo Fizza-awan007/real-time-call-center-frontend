@@ -15,7 +15,8 @@ import { getApiWithAuth } from "../../../utils/api";
 import {
   POOL_DASHBOARD_SUMMARY,
   POOL_DASHBOARD_LIST,
-  CALLTOOLS_SUMMARY
+  CALLTOOLS_SUMMARY,
+  CALLS_LIST
 } from "../../../utils/apiUrls";
 
 const PERIOD_OPTIONS = [
@@ -33,11 +34,11 @@ const CALLTOOLS_PERIOD_OPTIONS = [
 ];
 
 const GATEWAY_OPTIONS = [
-  { label: "Gateway 1", value: "gateway-1" },
-  { label: "Gateway 2", value: "gateway-2" },
-  { label: "Gateway 3", value: "gateway-3" },
-  { label: "All Gateways", value: "all-gateways" },
-  { label: "Call Tools", value: "call-tools" }
+  { label: "Gateway 1", value: "gateway-1", code: "G_100" },
+  { label: "Gateway 2", value: "gateway-2", code: "G_200" },
+  { label: "Gateway 3", value: "gateway-3", code: "G_300" },
+  { label: "All Gateways", value: "all-gateways", code: null },
+  { label: "Call Tools", value: "call-tools", code: null }
 ];
 
 const MedalIcon = ({ rank }) => {
@@ -131,11 +132,12 @@ const normalizeSummary = (data, isCallTools) => {
     };
   }
 
+  // handles both /api/calls summary and /api/pool-dashboard/summary
   return {
     totalDials: data.total_dials ?? 0,
     totalConnected: data.connects ?? 0,
     totalQualityConnected: null,
-    totalTransfers: null,
+    totalTransfers: data.transfers ?? null,
     transferRate: data.connect_rate ?? 0,
     averageDuration: data.avg_duration ?? 0
   };
@@ -164,6 +166,7 @@ const AgentLeadership = () => {
   const gatewayValue = gateway?.value;
   const periodValue = period?.value;
   const isCallTools = gatewayValue === "call-tools";
+  const isCallsApi = gatewayValue === "all-gateways" || gatewayValue === "gateway-1" || gatewayValue === "gateway-2" || gatewayValue === "gateway-3";
   const visiblePeriodOptions = isCallTools ? CALLTOOLS_PERIOD_OPTIONS : PERIOD_OPTIONS;
 
   const resolveSummaryEndpoint = () =>
@@ -202,6 +205,25 @@ const AgentLeadership = () => {
           params.set("dateTo", finalDateTo);
         } else {
           params.set("window", resolvePeriodValue());
+        }
+
+        if (isCallsApi) {
+          const gatewayCode = gateway?.code;
+          if (gatewayCode) params.set("gateway", gatewayCode);
+          params.set("page", "1");
+          params.set("limit", "50");
+
+          const res = await getApiWithAuth(
+            `${CALLS_LIST}?${params.toString()}`,
+            controller.signal
+          );
+          if (res.cancelled) return;
+          if (res.success && res.data?.ok) {
+            setStats(normalizeSummary(res.data.summary, false));
+          } else if (!res.success && !res.redirecting) {
+            toast.error(res.data?.error || res.data?.message || "Failed to load summary.");
+          }
+          return;
         }
 
         const res = await getApiWithAuth(
@@ -259,6 +281,30 @@ const AgentLeadership = () => {
             params.set("window", resolvePeriodValue());
           }
 
+          if (isCallsApi) {
+            const gatewayCode = gateway?.code;
+            if (gatewayCode) params.set("gateway", gatewayCode);
+
+            const res = await getApiWithAuth(
+              `${CALLS_LIST}?${params.toString()}`,
+              controller.signal
+            );
+            if (res.cancelled) return;
+            if (res.success && res.data?.data) {
+              setAgents(res.data.data);
+              setPagination({
+                totalCount: res.data.total,
+                pageSize: res.data.limit,
+                totalPages: Math.ceil(res.data.total / res.data.limit),
+                hasPrev: res.data.page > 1,
+                hasNext: res.data.page < Math.ceil(res.data.total / res.data.limit)
+              });
+            } else if (!res.success && !res.redirecting) {
+              toast.error(res.data?.error || res.data?.message || "Failed to load calls data.");
+            }
+            return;
+          }
+
           const res = await getApiWithAuth(
             `${POOL_DASHBOARD_LIST}?${params.toString()}`,
             controller.signal
@@ -293,7 +339,8 @@ const AgentLeadership = () => {
       clearTimeout(timeoutId);
       if (agentsAbortRef.current) agentsAbortRef.current.abort();
     };
-  }, [currentPage, dateFrom, dateTo, startTime, endTime, period, gateway]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentPage, dateFrom, dateTo, startTime, endTime, period, gateway, isCallsApi]);
 
   const filtered = agents.filter(
     (a) =>
@@ -337,6 +384,39 @@ const AgentLeadership = () => {
         },
         {
           label: "Average Duration (sec)",
+          value: formatSecondsValue(stats?.averageDuration),
+          iconBgClass: "bg-sky-50",
+          icon: <ChaveronIcon width={28} height={28} className="text-sky-500" />
+        }
+      ]
+    : isCallsApi
+    ? [
+        {
+          label: "Total Dials",
+          value: stats?.totalDials ?? "—",
+          iconBgClass: "bg-blue-50",
+          icon: <CallIcon width={28} height={28} className="text-blue-500" />
+        },
+        {
+          label: "Connects",
+          value: stats?.totalConnected ?? "—",
+          iconBgClass: "bg-emerald-50",
+          icon: <TimeIcon width={28} height={28} className="text-emerald-500" />
+        },
+        {
+          label: "Transfers",
+          value: stats?.totalTransfers ?? "—",
+          iconBgClass: "bg-orange-50",
+          icon: <GroupIcon width={28} height={28} className="text-orange-500" />
+        },
+        {
+          label: "Connect Rate",
+          value: formatPercentValue(stats?.transferRate, true),
+          iconBgClass: "bg-purple-50",
+          icon: <GraphIcon width={28} height={28} className="text-purple-500" />
+        },
+        {
+          label: "Avg Duration (sec)",
           value: formatSecondsValue(stats?.averageDuration),
           iconBgClass: "bg-sky-50",
           icon: <ChaveronIcon width={28} height={28} className="text-sky-500" />
@@ -394,7 +474,7 @@ const AgentLeadership = () => {
           </h1>
         </div>
 
-        <div className={`mb-7 grid gap-5 sm:grid-cols-2 ${isCallTools ? "xl:grid-cols-3" : "xl:grid-cols-4"}`}>
+        <div className={`mb-7 grid gap-5 sm:grid-cols-2 ${isCallTools ? "xl:grid-cols-3" : isCallsApi ? "xl:grid-cols-5" : "xl:grid-cols-4"}`}>
           {statsCards.map((card) => (
             <StatCard
               key={card.label}
