@@ -20,7 +20,7 @@ import {
 } from "../../../utils/apiUrls";
 
 const PERIOD_OPTIONS = [
-  { label: "Today", value: "today" },
+  { label: "24 hours", value: "24h" },
   { label: "15 minutes", value: "15m" },
   { label: "60 minutes", value: "1h" },
   { label: "7 days", value: "7d" }
@@ -28,6 +28,7 @@ const PERIOD_OPTIONS = [
 ];
 
 const CALLTOOLS_PERIOD_OPTIONS = [
+  { label: "24 hours", value: "24h" },
   { label: "15 minutes", value: "15m" },
   { label: "60 minutes", value: "1h" },
   { label: "7 days", value: "7d" }
@@ -169,16 +170,9 @@ const AgentLeadership = () => {
   const isCallsApi = gatewayValue === "all-gateways" || gatewayValue === "gateway-1" || gatewayValue === "gateway-2" || gatewayValue === "gateway-3";
   const visiblePeriodOptions = isCallTools ? CALLTOOLS_PERIOD_OPTIONS : PERIOD_OPTIONS;
 
-  const resolveSummaryEndpoint = () =>
-    isCallTools ? CALLTOOLS_SUMMARY : POOL_DASHBOARD_SUMMARY;
-
-  const resolvePeriodValue = () => {
-    return periodValue;
-  };
-
   useEffect(() => {
     if (periodValue === "24h") {
-      setPeriod(PERIOD_OPTIONS[3]);
+      setPeriod(PERIOD_OPTIONS[0]);
     }
   }, [gatewayValue, periodValue]);
 
@@ -204,7 +198,7 @@ const AgentLeadership = () => {
           params.set("dateFrom", finalDateFrom);
           params.set("dateTo", finalDateTo);
         } else {
-          params.set("window", resolvePeriodValue());
+          params.set("window", periodValue);
         }
 
         if (isCallsApi) {
@@ -227,7 +221,7 @@ const AgentLeadership = () => {
         }
 
         const res = await getApiWithAuth(
-          `${resolveSummaryEndpoint()}?${params.toString()}`,
+          `${isCallTools ? CALLTOOLS_SUMMARY : POOL_DASHBOARD_SUMMARY}?${params.toString()}`,
           controller.signal
         );
 
@@ -248,7 +242,7 @@ const AgentLeadership = () => {
       clearTimeout(timeoutId);
       if (statsAbortRef.current) statsAbortRef.current.abort();
     };
-  }, [period, dateFrom, dateTo, startTime, endTime, gateway]);
+  }, [period, dateFrom, dateTo, startTime, endTime, gateway, isCallTools, isCallsApi, periodValue]);
 
   useEffect(() => {
     if (!period && !dateFrom) return;
@@ -278,7 +272,7 @@ const AgentLeadership = () => {
             params.set("dateFrom", finalDateFrom);
             params.set("dateTo", finalDateTo);
           } else {
-            params.set("window", resolvePeriodValue());
+            params.set("window", periodValue);
           }
 
           if (isCallsApi) {
@@ -339,8 +333,7 @@ const AgentLeadership = () => {
       clearTimeout(timeoutId);
       if (agentsAbortRef.current) agentsAbortRef.current.abort();
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentPage, dateFrom, dateTo, startTime, endTime, period, gateway, isCallsApi]);
+  }, [currentPage, dateFrom, dateTo, startTime, endTime, period, periodValue, gateway, isCallsApi]);
 
   const filtered = agents.filter(
     (a) =>
@@ -724,7 +717,7 @@ const AgentLeadership = () => {
                                 setGatewayDropdownOpen(false);
                                 setDropdownOpen(false);
                                 if (option.value !== "call-tools" && periodValue === "24h") {
-                                  setPeriod(PERIOD_OPTIONS[3]);
+                                  setPeriod(PERIOD_OPTIONS[0]);
                                 }
                               }}
                             >
