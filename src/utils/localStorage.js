@@ -1,7 +1,7 @@
 export const setAccessToken = async (value) => {
   try {
     return localStorage.setItem("access_token", value);
-  } catch (e) {
+  } catch {
     return null;
   }
 };
@@ -11,7 +11,7 @@ export const getAccessToken = async () => {
     const value = localStorage.getItem("access_token");
 
     return value;
-  } catch (e) {
+  } catch {
     return null;
   }
 };
