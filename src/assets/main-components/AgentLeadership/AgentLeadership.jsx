@@ -35,9 +35,9 @@ const CALLTOOLS_PERIOD_OPTIONS = [
 ];
 
 const GATEWAY_OPTIONS = [
-  { label: "Gateway 1", value: "gateway-1", code: "G_100" },
-  { label: "Gateway 2", value: "gateway-2", code: "G_200" },
-  { label: "Gateway 3", value: "gateway-3", code: "G_300" },
+  { label: "Gateway 1", value: "gateway-1", code: "100" },
+  { label: "Gateway 2", value: "gateway-2", code: "200" },
+  { label: "Gateway 3", value: "gateway-3", code: "300" },
   { label: "All Gateways", value: "all-gateways", code: null },
   { label: "Call Tools", value: "call-tools", code: null }
 ];
