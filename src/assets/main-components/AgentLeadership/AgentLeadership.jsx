@@ -133,7 +133,7 @@ const normalizeSummary = (data, isCallTools) => {
     };
   }
 
-  // handles both /api/calls summary and /api/pool-dashboard/summary
+
   return {
     totalDials: data.total_dials ?? 0,
     totalConnected: data.connects ?? 0,
