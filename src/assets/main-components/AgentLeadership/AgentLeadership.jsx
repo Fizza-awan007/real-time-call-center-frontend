@@ -905,7 +905,7 @@ const AgentLeadership = () => {
                         </td>
                         <td className="px-4 py-4 align-middle text-sm sm:px-7">
                           <span className="inline-flex items-center rounded-full bg-indigo-50 px-2.5 py-0.5 text-[12px] font-medium text-indigo-600 capitalize">
-                            Readymode
+                            {isCallTools ? "Callmode" : "Readymode"}
                           </span>
                         </td>
                         <td className="px-4 py-4 text-center align-middle text-sm tabular-nums text-[#1a1d23] sm:px-7">
