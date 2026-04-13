@@ -144,12 +144,19 @@ const normalizeSummary = (data, isCallTools) => {
   };
 };
 
+const GROUP_BY_OPTIONS = [
+  { label: "DID", value: "did" },
+  { label: "Campaign", value: "campaign" }
+];
+
 const AgentLeadership = () => {
   const [period, setPeriod] = useState(PERIOD_OPTIONS[0]);
   const [gateway, setGateway] = useState(GATEWAY_OPTIONS[3]);
   const [search, setSearch] = useState("");
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [gatewayDropdownOpen, setGatewayDropdownOpen] = useState(false);
+  const [groupBy, setGroupBy] = useState(GROUP_BY_OPTIONS[0]);
+  const [groupByDropdownOpen, setGroupByDropdownOpen] = useState(false);
   const [stats, setStats] = useState(null);
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
@@ -166,6 +173,7 @@ const AgentLeadership = () => {
   const agentsAbortRef = useRef(null);
   const gatewayValue = gateway?.value;
   const periodValue = period?.value;
+  const groupByValue = groupBy?.value;
   const isCallTools = gatewayValue === "call-tools";
   const isCallsApi = gatewayValue === "all-gateways" || gatewayValue === "gateway-1" || gatewayValue === "gateway-2" || gatewayValue === "gateway-3";
   const visiblePeriodOptions = isCallTools ? CALLTOOLS_PERIOD_OPTIONS : PERIOD_OPTIONS;
@@ -201,22 +209,9 @@ const AgentLeadership = () => {
           params.set("window", periodValue);
         }
 
-        if (isCallsApi) {
-          const gatewayCode = gateway?.code;
-          if (gatewayCode) params.set("gateway", gatewayCode);
-          params.set("page", "1");
-          params.set("limit", "50");
-
-          const res = await getApiWithAuth(
-            `${CALLS_LIST}?${params.toString()}`,
-            controller.signal
-          );
-          if (res.cancelled) return;
-          if (res.success && res.data?.ok) {
-            setStats(normalizeSummary(res.data.summary, false));
-          } else if (!res.success && !res.redirecting) {
-            toast.error(res.data?.error || res.data?.message || "Failed to load summary.");
-          }
+        if (isCallsApi || isCallTools) {
+          // The summary for isCallsApi and isCallTools is fetched simultaneously with the agents list
+          // in the second useEffect hook to avoid making duplicate API calls.
           return;
         }
 
@@ -242,7 +237,7 @@ const AgentLeadership = () => {
       clearTimeout(timeoutId);
       if (statsAbortRef.current) statsAbortRef.current.abort();
     };
-  }, [period, dateFrom, dateTo, startTime, endTime, gateway, isCallTools, isCallsApi, periodValue]);
+  }, [period, dateFrom, dateTo, startTime, endTime, gateway, isCallTools, isCallsApi, periodValue, groupByValue]);
 
   useEffect(() => {
     if (!period && !dateFrom) return;
@@ -275,6 +270,29 @@ const AgentLeadership = () => {
             params.set("window", periodValue);
           }
 
+          if (isCallTools) {
+            params.set("filter", groupByValue);
+            const res = await getApiWithAuth(
+              `${CALLTOOLS_SUMMARY}?${params.toString()}`,
+              controller.signal
+            );
+            if (res.cancelled) return;
+            if (res.success && (res.data?.summary || res.data?.ok)) {
+              setAgents(res.data?.data ?? []);
+              setPagination(res.data?.pagination ? {
+                totalCount: res.data.pagination.total,
+                pageSize: res.data.pagination.limit,
+                totalPages: res.data.pagination.totalPages ?? Math.ceil(res.data.pagination.total / res.data.pagination.limit),
+                hasPrev: res.data.pagination.page > 1,
+                hasNext: res.data.pagination.page < (res.data.pagination.totalPages ?? Math.ceil(res.data.pagination.total / res.data.pagination.limit))
+              } : null);
+              setStats(normalizeSummary(res.data?.summary || res.data, true));
+            } else if (!res.success && !res.redirecting) {
+              toast.error(res.data?.error || res.data?.message || "Failed to load call tools data.");
+            }
+            return;
+          }
+
           if (isCallsApi) {
             const gatewayCode = gateway?.code;
             if (gatewayCode) params.set("gateway", gatewayCode);
@@ -293,6 +311,10 @@ const AgentLeadership = () => {
                 hasPrev: res.data.page > 1,
                 hasNext: res.data.page < Math.ceil(res.data.total / res.data.limit)
               });
+              
+              if (res.data?.ok || res.data?.summary) {
+                setStats(normalizeSummary(res.data.summary, false));
+              }
             } else if (!res.success && !res.redirecting) {
               toast.error(res.data?.error || res.data?.message || "Failed to load calls data.");
             }
@@ -333,7 +355,7 @@ const AgentLeadership = () => {
       clearTimeout(timeoutId);
       if (agentsAbortRef.current) agentsAbortRef.current.abort();
     };
-  }, [currentPage, dateFrom, dateTo, startTime, endTime, period, periodValue, gateway, isCallsApi]);
+  }, [currentPage, dateFrom, dateTo, startTime, endTime, period, periodValue, gateway, isCallsApi, isCallTools, groupByValue]);
 
   const filtered = agents.filter(
     (a) =>
@@ -728,6 +750,55 @@ const AgentLeadership = () => {
                       )}
                     </div>
                   </div>
+
+                  <div className="flex min-w-0 flex-none items-center gap-2 text-[13px] text-gray-500 md:justify-end md:ml-0">
+                    <span className={`font-medium ${isCallTools ? "text-gray-700" : "text-gray-400"}`}>Group By:</span>
+                    <div className="relative">
+                      <button
+                        type="button"
+                        disabled={!isCallTools}
+                        className={`flex h-9 w-[140px] items-center justify-between gap-1.5 rounded-lg border px-3.5 text-[13px] font-medium transition-colors sm:w-[140px] ${
+                          isCallTools
+                            ? "border-gray-200 bg-white text-gray-700 hover:border-gray-300 cursor-pointer"
+                            : "border-gray-100 bg-gray-50 text-gray-400 cursor-not-allowed"
+                        }`}
+                        onClick={() => isCallTools && setGroupByDropdownOpen((o) => !o)}
+                      >
+                        {groupBy ? groupBy.label : "Group By"}
+                        <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                          <path
+                            d="M3 4.5L6 7.5L9 4.5"
+                            stroke={isCallTools ? "#374151" : "#9ca3af"}
+                            strokeWidth="1.5"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          />
+                        </svg>
+                      </button>
+                      {groupByDropdownOpen && isCallTools && (
+                        <div className="absolute right-0 top-[calc(100%+4px)] z-50 w-full overflow-hidden rounded-lg border border-gray-200 bg-white shadow-[0_4px_16px_rgba(0,0,0,0.1)]">
+                          {GROUP_BY_OPTIONS.map((option) => (
+                            <button
+                              key={option.value}
+                              type="button"
+                              className={`block w-full px-3.5 py-[9px] text-left text-[13px] transition-colors hover:bg-gray-50 ${
+                                groupBy && option.value === groupBy.value
+                                  ? "bg-indigo-50 font-semibold text-indigo-500"
+                                  : "text-gray-700"
+                              }`}
+                              onClick={() => {
+                                setGroupBy(option);
+                                setCurrentPage(1);
+                                setGroupByDropdownOpen(false);
+                              }}
+                            >
+                              {option.label}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -741,7 +812,11 @@ const AgentLeadership = () => {
                     #
                   </th>
                   <th className="border-b border-gray-100 px-3 py-3 text-left text-[11px] font-semibold uppercase tracking-[0.6px] text-[#45556C] font-urbanist sm:px-7">
-                    Pool Name
+                    {isCallTools
+                      ? groupByValue === "campaign"
+                        ? "Group By Campaign"
+                        : "Group By DID"
+                      : "Pool Name"}
                   </th>
                   <th className="border-b border-gray-100 px-3 py-3 text-left text-[11px] font-semibold uppercase tracking-[0.6px] text-[#45556C] font-urbanist sm:px-7">
                     Platform
