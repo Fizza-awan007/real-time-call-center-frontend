@@ -15,11 +15,12 @@ import { getApiWithAuth } from "../../../utils/api";
 import {
   POOL_DASHBOARD_SUMMARY,
   POOL_DASHBOARD_LIST,
-  CALLTOOLS_SUMMARY
+  CALLTOOLS_SUMMARY,
+  CALLS_LIST
 } from "../../../utils/apiUrls";
 
 const PERIOD_OPTIONS = [
-  { label: "Today", value: "today" },
+  { label: "24 hours", value: "24h" },
   { label: "15 minutes", value: "15m" },
   { label: "60 minutes", value: "1h" },
   { label: "7 days", value: "7d" }
@@ -27,17 +28,18 @@ const PERIOD_OPTIONS = [
 ];
 
 const CALLTOOLS_PERIOD_OPTIONS = [
+  { label: "24 hours", value: "24h" },
   { label: "15 minutes", value: "15m" },
   { label: "60 minutes", value: "1h" },
   { label: "7 days", value: "7d" }
 ];
 
 const GATEWAY_OPTIONS = [
-  { label: "Gateway 1", value: "gateway-1" },
-  { label: "Gateway 2", value: "gateway-2" },
-  { label: "Gateway 3", value: "gateway-3" },
-  { label: "All Gateways", value: "all-gateways" },
-  { label: "Call Tools", value: "call-tools" }
+  { label: "Gateway 1", value: "gateway-1", code: "100" },
+  { label: "Gateway 2", value: "gateway-2", code: "200" },
+  { label: "Gateway 3", value: "gateway-3", code: "300" },
+  { label: "All Gateways", value: "all-gateways", code: null },
+  { label: "Call Tools", value: "call-tools", code: null }
 ];
 
 const MedalIcon = ({ rank }) => {
@@ -122,24 +124,30 @@ const normalizeSummary = (data, isCallTools) => {
 
   if (isCallTools) {
     return {
-      totalDials: data.totalDials ?? 0,
-      totalConnected: data.totalConnected ?? 0,
-      totalQualityConnected: data.totalQualityConnected ?? 0,
-      totalTransfers: data.totalTransfers ?? 0,
-      transferRate: data.transferRate ?? 0,
-      averageDuration: data.average_duration ?? 0
+      totalDials: data.total_dials ?? 0,
+      totalConnected: data.connects ?? 0,
+      totalQualityConnected: data.quality_connects ?? 0,
+      totalTransfers: data.transfers ?? 0,
+      transferRate: data.transfer_rate ?? 0,
+      averageDuration: data.avg_duration ?? 0
     };
   }
+
 
   return {
     totalDials: data.total_dials ?? 0,
     totalConnected: data.connects ?? 0,
     totalQualityConnected: null,
-    totalTransfers: null,
+    totalTransfers: data.transfers ?? null,
     transferRate: data.connect_rate ?? 0,
     averageDuration: data.avg_duration ?? 0
   };
 };
+
+const GROUP_BY_OPTIONS = [
+  { label: "DID", value: "did" },
+  { label: "Campaign", value: "campaign" }
+];
 
 const AgentLeadership = () => {
   const [period, setPeriod] = useState(PERIOD_OPTIONS[0]);
@@ -147,6 +155,8 @@ const AgentLeadership = () => {
   const [search, setSearch] = useState("");
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [gatewayDropdownOpen, setGatewayDropdownOpen] = useState(false);
+  const [groupBy, setGroupBy] = useState(GROUP_BY_OPTIONS[0]);
+  const [groupByDropdownOpen, setGroupByDropdownOpen] = useState(false);
   const [stats, setStats] = useState(null);
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
@@ -163,19 +173,14 @@ const AgentLeadership = () => {
   const agentsAbortRef = useRef(null);
   const gatewayValue = gateway?.value;
   const periodValue = period?.value;
+  const groupByValue = groupBy?.value;
   const isCallTools = gatewayValue === "call-tools";
+  const isCallsApi = gatewayValue === "all-gateways" || gatewayValue === "gateway-1" || gatewayValue === "gateway-2" || gatewayValue === "gateway-3";
   const visiblePeriodOptions = isCallTools ? CALLTOOLS_PERIOD_OPTIONS : PERIOD_OPTIONS;
-
-  const resolveSummaryEndpoint = () =>
-    isCallTools ? CALLTOOLS_SUMMARY : POOL_DASHBOARD_SUMMARY;
-
-  const resolvePeriodValue = () => {
-    return periodValue;
-  };
 
   useEffect(() => {
     if (periodValue === "24h") {
-      setPeriod(PERIOD_OPTIONS[3]);
+      setPeriod(PERIOD_OPTIONS[0]);
     }
   }, [gatewayValue, periodValue]);
 
@@ -201,11 +206,17 @@ const AgentLeadership = () => {
           params.set("dateFrom", finalDateFrom);
           params.set("dateTo", finalDateTo);
         } else {
-          params.set("window", resolvePeriodValue());
+          params.set("window", periodValue);
+        }
+
+        if (isCallsApi || isCallTools) {
+          // The summary for isCallsApi and isCallTools is fetched simultaneously with the agents list
+          // in the second useEffect hook to avoid making duplicate API calls.
+          return;
         }
 
         const res = await getApiWithAuth(
-          `${resolveSummaryEndpoint()}?${params.toString()}`,
+          `${isCallTools ? CALLTOOLS_SUMMARY : POOL_DASHBOARD_SUMMARY}?${params.toString()}`,
           controller.signal
         );
 
@@ -226,7 +237,7 @@ const AgentLeadership = () => {
       clearTimeout(timeoutId);
       if (statsAbortRef.current) statsAbortRef.current.abort();
     };
-  }, [period, dateFrom, dateTo, startTime, endTime, gateway]);
+  }, [period, dateFrom, dateTo, startTime, endTime, gateway, isCallTools, isCallsApi, periodValue, groupByValue]);
 
   useEffect(() => {
     if (!period && !dateFrom) return;
@@ -256,7 +267,80 @@ const AgentLeadership = () => {
             params.set("dateFrom", finalDateFrom);
             params.set("dateTo", finalDateTo);
           } else {
-            params.set("window", resolvePeriodValue());
+            params.set("window", periodValue);
+          }
+
+          if (isCallTools) {
+            params.set("filter", groupByValue);
+            const res = await getApiWithAuth(
+              `${CALLTOOLS_SUMMARY}?${params.toString()}`,
+              controller.signal
+            );
+            if (res.cancelled) return;
+            if (res.success && (res.data?.summary || res.data?.ok)) {
+              // Handle nested response structure for DID/Campaign filters
+              const filterData = res.data?.[groupByValue];
+              const rawAgents = filterData?.data ?? [];
+
+              // Map 'did' or 'campaign' field to 'pool_name' for table display
+              const mappedAgents = rawAgents.map(agent => {
+                let displayName = agent.pool_name;
+
+                if (groupByValue === "did") {
+                  displayName = agent.did || "Unknown DID";
+                } else if (groupByValue === "campaign") {
+                  displayName = agent.campaign !== null && agent.campaign !== undefined
+                    ? String(agent.campaign)
+                    : "Unknown Campaign";
+                }
+
+                return {
+                  ...agent,
+                  pool_name: displayName
+                };
+              });
+
+              setAgents(mappedAgents);
+              setPagination(filterData ? {
+                totalCount: filterData.total,
+                pageSize: filterData.limit,
+                totalPages: filterData.totalPages ?? Math.ceil(filterData.total / filterData.limit),
+                hasPrev: filterData.page > 1,
+                hasNext: filterData.page < (filterData.totalPages ?? Math.ceil(filterData.total / filterData.limit))
+              } : null);
+              setStats(normalizeSummary(res.data?.summary || res.data, true));
+            } else if (!res.success && !res.redirecting) {
+              toast.error(res.data?.error || res.data?.message || "Failed to load call tools data.");
+            }
+            return;
+          }
+
+          if (isCallsApi) {
+            const gatewayCode = gateway?.code;
+            if (gatewayCode) params.set("gateway", gatewayCode);
+
+            const res = await getApiWithAuth(
+              `${CALLS_LIST}?${params.toString()}`,
+              controller.signal
+            );
+            if (res.cancelled) return;
+            if (res.success && res.data?.data) {
+              setAgents(res.data.data);
+              setPagination({
+                totalCount: res.data.total,
+                pageSize: res.data.limit,
+                totalPages: Math.ceil(res.data.total / res.data.limit),
+                hasPrev: res.data.page > 1,
+                hasNext: res.data.page < Math.ceil(res.data.total / res.data.limit)
+              });
+              
+              if (res.data?.ok || res.data?.summary) {
+                setStats(normalizeSummary(res.data.summary, false));
+              }
+            } else if (!res.success && !res.redirecting) {
+              toast.error(res.data?.error || res.data?.message || "Failed to load calls data.");
+            }
+            return;
           }
 
           const res = await getApiWithAuth(
@@ -293,7 +377,7 @@ const AgentLeadership = () => {
       clearTimeout(timeoutId);
       if (agentsAbortRef.current) agentsAbortRef.current.abort();
     };
-  }, [currentPage, dateFrom, dateTo, startTime, endTime, period, gateway]);
+  }, [currentPage, dateFrom, dateTo, startTime, endTime, period, periodValue, gateway, isCallsApi, isCallTools, groupByValue]);
 
   const filtered = agents.filter(
     (a) =>
@@ -337,6 +421,39 @@ const AgentLeadership = () => {
         },
         {
           label: "Average Duration (sec)",
+          value: formatSecondsValue(stats?.averageDuration),
+          iconBgClass: "bg-sky-50",
+          icon: <ChaveronIcon width={28} height={28} className="text-sky-500" />
+        }
+      ]
+    : isCallsApi
+    ? [
+        {
+          label: "Total Dials",
+          value: stats?.totalDials ?? "—",
+          iconBgClass: "bg-blue-50",
+          icon: <CallIcon width={28} height={28} className="text-blue-500" />
+        },
+        {
+          label: "Connects",
+          value: stats?.totalConnected ?? "—",
+          iconBgClass: "bg-emerald-50",
+          icon: <TimeIcon width={28} height={28} className="text-emerald-500" />
+        },
+        {
+          label: "Transfers",
+          value: stats?.totalTransfers ?? "—",
+          iconBgClass: "bg-orange-50",
+          icon: <GroupIcon width={28} height={28} className="text-orange-500" />
+        },
+        {
+          label: "Connect Rate",
+          value: formatPercentValue(stats?.transferRate, true),
+          iconBgClass: "bg-purple-50",
+          icon: <GraphIcon width={28} height={28} className="text-purple-500" />
+        },
+        {
+          label: "Avg Duration (sec)",
           value: formatSecondsValue(stats?.averageDuration),
           iconBgClass: "bg-sky-50",
           icon: <ChaveronIcon width={28} height={28} className="text-sky-500" />
@@ -394,7 +511,7 @@ const AgentLeadership = () => {
           </h1>
         </div>
 
-        <div className={`mb-7 grid gap-5 sm:grid-cols-2 ${isCallTools ? "xl:grid-cols-3" : "xl:grid-cols-4"}`}>
+        <div className={`mb-7 grid gap-5 sm:grid-cols-2 ${isCallTools ? "xl:grid-cols-3" : isCallsApi ? "xl:grid-cols-5" : "xl:grid-cols-4"}`}>
           {statsCards.map((card) => (
             <StatCard
               key={card.label}
@@ -644,8 +761,57 @@ const AgentLeadership = () => {
                                 setGatewayDropdownOpen(false);
                                 setDropdownOpen(false);
                                 if (option.value !== "call-tools" && periodValue === "24h") {
-                                  setPeriod(PERIOD_OPTIONS[3]);
+                                  setPeriod(PERIOD_OPTIONS[0]);
                                 }
+                              }}
+                            >
+                              {option.label}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="flex min-w-0 flex-none items-center gap-2 text-[13px] text-gray-500 md:justify-end md:ml-0">
+                    <span className={`font-medium ${isCallTools ? "text-gray-700" : "text-gray-400"}`}>Group By:</span>
+                    <div className="relative">
+                      <button
+                        type="button"
+                        disabled={!isCallTools}
+                        className={`flex h-9 w-[140px] items-center justify-between gap-1.5 rounded-lg border px-3.5 text-[13px] font-medium transition-colors sm:w-[140px] ${
+                          isCallTools
+                            ? "border-gray-200 bg-white text-gray-700 hover:border-gray-300 cursor-pointer"
+                            : "border-gray-100 bg-gray-50 text-gray-400 cursor-not-allowed"
+                        }`}
+                        onClick={() => isCallTools && setGroupByDropdownOpen((o) => !o)}
+                      >
+                        {groupBy ? groupBy.label : "Group By"}
+                        <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                          <path
+                            d="M3 4.5L6 7.5L9 4.5"
+                            stroke={isCallTools ? "#374151" : "#9ca3af"}
+                            strokeWidth="1.5"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          />
+                        </svg>
+                      </button>
+                      {groupByDropdownOpen && isCallTools && (
+                        <div className="absolute right-0 top-[calc(100%+4px)] z-50 w-full overflow-hidden rounded-lg border border-gray-200 bg-white shadow-[0_4px_16px_rgba(0,0,0,0.1)]">
+                          {GROUP_BY_OPTIONS.map((option) => (
+                            <button
+                              key={option.value}
+                              type="button"
+                              className={`block w-full px-3.5 py-[9px] text-left text-[13px] transition-colors hover:bg-gray-50 ${
+                                groupBy && option.value === groupBy.value
+                                  ? "bg-indigo-50 font-semibold text-indigo-500"
+                                  : "text-gray-700"
+                              }`}
+                              onClick={() => {
+                                setGroupBy(option);
+                                setCurrentPage(1);
+                                setGroupByDropdownOpen(false);
                               }}
                             >
                               {option.label}
@@ -668,7 +834,11 @@ const AgentLeadership = () => {
                     #
                   </th>
                   <th className="border-b border-gray-100 px-3 py-3 text-left text-[11px] font-semibold uppercase tracking-[0.6px] text-[#45556C] font-urbanist sm:px-7">
-                    Pool Name
+                    {isCallTools
+                      ? groupByValue === "campaign"
+                        ? "Group By Campaign"
+                        : "Group By DID"
+                      : "Pool Name"}
                   </th>
                   <th className="border-b border-gray-100 px-3 py-3 text-left text-[11px] font-semibold uppercase tracking-[0.6px] text-[#45556C] font-urbanist sm:px-7">
                     Platform
@@ -735,7 +905,7 @@ const AgentLeadership = () => {
                         </td>
                         <td className="px-4 py-4 align-middle text-sm sm:px-7">
                           <span className="inline-flex items-center rounded-full bg-indigo-50 px-2.5 py-0.5 text-[12px] font-medium text-indigo-600 capitalize">
-                            Readymode
+                            {isCallTools ? "Callmode" : "Readymode"}
                           </span>
                         </td>
                         <td className="px-4 py-4 text-center align-middle text-sm tabular-nums text-[#1a1d23] sm:px-7">
