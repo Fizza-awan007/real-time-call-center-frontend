@@ -124,12 +124,12 @@ const normalizeSummary = (data, isCallTools) => {
 
   if (isCallTools) {
     return {
-      totalDials: data.totalDials ?? 0,
-      totalConnected: data.totalConnected ?? 0,
-      totalQualityConnected: data.totalQualityConnected ?? 0,
-      totalTransfers: data.totalTransfers ?? 0,
-      transferRate: data.transferRate ?? 0,
-      averageDuration: data.average_duration ?? 0
+      totalDials: data.total_dials ?? 0,
+      totalConnected: data.connects ?? 0,
+      totalQualityConnected: data.quality_connects ?? 0,
+      totalTransfers: data.transfers ?? 0,
+      transferRate: data.transfer_rate ?? 0,
+      averageDuration: data.avg_duration ?? 0
     };
   }
 
@@ -278,13 +278,35 @@ const AgentLeadership = () => {
             );
             if (res.cancelled) return;
             if (res.success && (res.data?.summary || res.data?.ok)) {
-              setAgents(res.data?.data ?? []);
-              setPagination(res.data?.pagination ? {
-                totalCount: res.data.pagination.total,
-                pageSize: res.data.pagination.limit,
-                totalPages: res.data.pagination.totalPages ?? Math.ceil(res.data.pagination.total / res.data.pagination.limit),
-                hasPrev: res.data.pagination.page > 1,
-                hasNext: res.data.pagination.page < (res.data.pagination.totalPages ?? Math.ceil(res.data.pagination.total / res.data.pagination.limit))
+              // Handle nested response structure for DID/Campaign filters
+              const filterData = res.data?.[groupByValue];
+              const rawAgents = filterData?.data ?? [];
+
+              // Map 'did' or 'campaign' field to 'pool_name' for table display
+              const mappedAgents = rawAgents.map(agent => {
+                let displayName = agent.pool_name;
+
+                if (groupByValue === "did") {
+                  displayName = agent.did || "Unknown DID";
+                } else if (groupByValue === "campaign") {
+                  displayName = agent.campaign !== null && agent.campaign !== undefined
+                    ? String(agent.campaign)
+                    : "Unknown Campaign";
+                }
+
+                return {
+                  ...agent,
+                  pool_name: displayName
+                };
+              });
+
+              setAgents(mappedAgents);
+              setPagination(filterData ? {
+                totalCount: filterData.total,
+                pageSize: filterData.limit,
+                totalPages: filterData.totalPages ?? Math.ceil(filterData.total / filterData.limit),
+                hasPrev: filterData.page > 1,
+                hasNext: filterData.page < (filterData.totalPages ?? Math.ceil(filterData.total / filterData.limit))
               } : null);
               setStats(normalizeSummary(res.data?.summary || res.data, true));
             } else if (!res.success && !res.redirecting) {
