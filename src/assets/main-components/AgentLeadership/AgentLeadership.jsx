@@ -282,6 +282,13 @@ const AgentLeadership = () => {
               const filterData = res.data?.[groupByValue];
               const rawAgents = filterData?.data ?? [];
 
+              console.log('Call Tools Debug:', {
+                groupByValue,
+                filterData,
+                rawAgentsLength: rawAgents.length,
+                fullResponse: res.data
+              });
+
               // Map 'did' or 'campaign' field to 'pool_name' for table display
               const mappedAgents = rawAgents.map(agent => {
                 let displayName = agent.pool_name;
@@ -299,6 +306,8 @@ const AgentLeadership = () => {
                   pool_name: displayName
                 };
               });
+
+              console.log('Mapped Agents:', mappedAgents);
 
               setAgents(mappedAgents);
               setPagination(filterData ? {
@@ -384,6 +393,15 @@ const AgentLeadership = () => {
       a.pool_name?.toLowerCase().includes(search.toLowerCase()) ||
       a.platform?.toLowerCase().includes(search.toLowerCase())
   );
+
+  console.log('Filter Debug:', {
+    agentsLength: agents.length,
+    filteredLength: filtered.length,
+    search,
+    isCallTools,
+    agents: agents.slice(0, 3),
+    filtered: filtered.slice(0, 3)
+  });
 
   const totalPages = pagination?.totalPages ?? 1;
 
