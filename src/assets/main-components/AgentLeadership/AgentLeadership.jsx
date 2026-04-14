@@ -851,8 +851,8 @@ const AgentLeadership = () => {
                   <th className="border-b border-gray-100 px-3 py-3 text-left text-[11px] font-semibold uppercase tracking-[0.6px] text-[#45556C] font-urbanist sm:px-7">
                     {isCallTools
                       ? groupByValue === "campaign"
-                        ? "Group By Campaign"
-                        : "Group By DID"
+                        ? "Campaign"
+                        : "DID"
                       : "Pool Name"}
                   </th>
                   <th className="border-b border-gray-100 px-3 py-3 text-left text-[11px] font-semibold uppercase tracking-[0.6px] text-[#45556C] font-urbanist sm:px-7">
@@ -920,7 +920,7 @@ const AgentLeadership = () => {
                         </td>
                         <td className="px-4 py-4 align-middle text-sm sm:px-7">
                           <span className="inline-flex items-center rounded-full bg-indigo-50 px-2.5 py-0.5 text-[12px] font-medium text-indigo-600 capitalize">
-                            {isCallTools ? "Callmode" : "Readymode"}
+                            {isCallTools ? "Calltool" : "Readymode"}
                           </span>
                         </td>
                         <td className="px-4 py-4 text-center align-middle text-sm tabular-nums text-[#1a1d23] sm:px-7">

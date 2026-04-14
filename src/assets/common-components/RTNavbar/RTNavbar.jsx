@@ -128,7 +128,7 @@ const RTNavbar = ({
               onClick={() => setProfileOpen(!profileOpen)}
             >
               <div className="h-10 w-10 shrink-0 overflow-hidden rounded-full">
-                <Avatar name={resolvedUserName} width={37} height={37} />
+                <Avatar name={resolvedUserName} width={37} height={35} />
               </div>
               <div className="hidden flex-col leading-[1.2] sm:flex">
                 <span className="text-[14px] font-semibold text-[#111827]">
