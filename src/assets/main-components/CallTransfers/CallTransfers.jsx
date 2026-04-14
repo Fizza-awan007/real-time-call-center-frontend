@@ -9,7 +9,6 @@ import { CALL_TRANSFERS } from "../../../utils/apiUrls";
 const TIME_RANGE_OPTIONS = [
   { label: "24 Hours", value: "24h" },
   { label: "7 Days", value: "7d" },
-  { label: "30 Days", value: "30d" },
 ];
 
 const formatDuration = (seconds) => {
