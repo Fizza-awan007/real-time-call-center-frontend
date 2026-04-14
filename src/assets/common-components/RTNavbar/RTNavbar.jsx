@@ -3,6 +3,7 @@ import { NavLink, useNavigate } from "react-router-dom";
 import Avatar from "../../RTIcons/Avatar";
 import LogoIcon from "../../RTIcons/Logo";
 import { removeAccessToken } from "../../../utils/localStorage";
+import RegisterUser from "../../main-components/RegisterUser/RegisterUser";
 
 const RTNavbar = ({
   userName,
@@ -12,6 +13,7 @@ const RTNavbar = ({
   const [menuOpen, setMenuOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
+  const [isRegisterOpen, setIsRegisterOpen] = useState(false);
   const navigate = useNavigate();
 
   const getStoredUserName = () => {
@@ -41,7 +43,20 @@ const RTNavbar = ({
     }
   };
 
+  const getStoredUserRole = () => {
+    try {
+      const userRaw = localStorage.getItem("user");
+      if (!userRaw) return null;
+      const parsedUser = JSON.parse(userRaw);
+      return parsedUser?.role || null;
+    } catch {
+      return null;
+    }
+  };
+
   const resolvedUserName = userName?.trim() || getStoredUserName() || "Chris Miguel";
+  const resolvedUserRole = getStoredUserRole() || userRole;
+  const isAdmin = resolvedUserRole?.toLowerCase() === "admin";
 
   const handleLogoutClick = () => {
     setProfileOpen(false);
@@ -58,6 +73,20 @@ const RTNavbar = ({
     setIsLogoutModalOpen(false);
   };
 
+  const navLinkClass = ({ isActive }) =>
+    `px-4 py-1.5 rounded-lg text-[14px] font-medium transition-colors ${
+      isActive
+        ? "bg-indigo-50 text-indigo-600"
+        : "text-[#62748E] hover:text-[#1a1d23] hover:bg-gray-100"
+    }`;
+
+  const mobileNavLinkClass = ({ isActive }) =>
+    `px-4 py-2.5 rounded-lg text-[14px] font-medium transition-colors ${
+      isActive
+        ? "bg-indigo-50 text-indigo-600"
+        : "text-[#62748E] hover:text-[#1a1d23] hover:bg-gray-100"
+    }`;
+
   return (
     <>
       <header className="sticky top-0 z-50 bg-[#FFFFFF] shadow-[0_1px_0_rgba(0,0,0,0.06)]">
@@ -70,34 +99,31 @@ const RTNavbar = ({
 
           {/* Desktop nav */}
           <nav className="absolute left-1/2 -translate-x-1/2 hidden sm:flex items-center gap-1">
-            <NavLink
-              to="/home"
-              className={({ isActive }) =>
-                `px-4 py-1.5 rounded-lg text-[14px] font-medium transition-colors ${
-                  isActive
-                    ? "bg-indigo-50 text-indigo-600"
-                    : "text-[#62748E] hover:text-[#1a1d23] hover:bg-gray-100"
-                }`
-              }
-            >
+            <NavLink to="/home" className={navLinkClass}>
               Dashboard
             </NavLink>
-            <NavLink
-              to="/upload"
-              className={({ isActive }) =>
-                `px-4 py-1.5 rounded-lg text-[14px] font-medium transition-colors ${
-                  isActive
-                    ? "bg-indigo-50 text-indigo-600"
-                    : "text-[#62748E] hover:text-[#1a1d23] hover:bg-gray-100"
-                }`
-              }
-            >
+            <NavLink to="/transfers" className={navLinkClass}>
+              Transfers
+            </NavLink>
+            <NavLink to="/upload" className={navLinkClass}>
               Upload File
             </NavLink>
+            {isAdmin && (
+              <button
+                onClick={() => setIsRegisterOpen(true)}
+                className={`px-4 py-1.5 rounded-lg text-[14px] font-medium transition-colors ${
+                  isRegisterOpen
+                    ? "bg-indigo-50 text-indigo-600"
+                    : "text-[#62748E] hover:text-[#1a1d23] hover:bg-gray-100"
+                }`}
+              >
+                Register User
+              </button>
+            )}
           </nav>
 
           <div className="flex items-center gap-2.5 relative">
-            <div 
+            <div
               className="flex items-center gap-2.5 cursor-pointer"
               onClick={() => setProfileOpen(!profileOpen)}
             >
@@ -109,7 +135,7 @@ const RTNavbar = ({
                   {resolvedUserName}
                 </span>
                 <span className="text-[11px] text-[#8A94A6]">
-                  {userRole}
+                  {resolvedUserRole}
                 </span>
               </div>
             </div>
@@ -151,42 +177,54 @@ const RTNavbar = ({
             <NavLink
               to="/home"
               onClick={() => setMenuOpen(false)}
-              className={({ isActive }) =>
-                `px-4 py-2.5 rounded-lg text-[14px] font-medium transition-colors ${
-                  isActive
-                    ? "bg-indigo-50 text-indigo-600"
-                    : "text-[#62748E] hover:text-[#1a1d23] hover:bg-gray-100"
-                }`
-              }
+              className={mobileNavLinkClass}
             >
               Dashboard
             </NavLink>
             <NavLink
+              to="/transfers"
+              onClick={() => setMenuOpen(false)}
+              className={mobileNavLinkClass}
+            >
+              Transfers
+            </NavLink>
+            <NavLink
               to="/upload"
               onClick={() => setMenuOpen(false)}
-              className={({ isActive }) =>
-                `px-4 py-2.5 rounded-lg text-[14px] font-medium transition-colors ${
-                  isActive
-                    ? "bg-indigo-50 text-indigo-600"
-                    : "text-[#62748E] hover:text-[#1a1d23] hover:bg-gray-100"
-                }`
-              }
+              className={mobileNavLinkClass}
             >
               Upload File
             </NavLink>
+            {isAdmin && (
+              <button
+                onClick={() => { setMenuOpen(false); setIsRegisterOpen(true); }}
+                className={`px-4 py-2.5 rounded-lg text-[14px] font-medium text-left transition-colors ${
+                  isRegisterOpen
+                    ? "bg-indigo-50 text-indigo-600"
+                    : "text-[#62748E] hover:text-[#1a1d23] hover:bg-gray-100"
+                }`}
+              >
+                Register User
+              </button>
+            )}
           </nav>
         )}
       </header>
+
+      {/* Register User Modal */}
+      {isRegisterOpen && (
+        <RegisterUser onClose={() => setIsRegisterOpen(false)} />
+      )}
 
       {/* Logout Confirmation Modal */}
       {isLogoutModalOpen && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center overflow-y-auto overflow-x-hidden outline-none focus:outline-none px-4">
           {/* Backdrop */}
-          <div 
-            className="fixed inset-0 bg-black/40 backdrop-blur-sm transition-opacity" 
+          <div
+            className="fixed inset-0 bg-black/40 backdrop-blur-sm transition-opacity"
             onClick={cancelLogout}
           />
-          
+
           {/* Modal Container */}
           <div className="relative mx-auto my-6 w-full max-w-md animate-in fade-in zoom-in duration-200">
             <div className="relative flex w-full flex-col rounded-2xl border-0 bg-white shadow-2xl outline-none focus:outline-none overflow-hidden">
@@ -205,7 +243,7 @@ const RTNavbar = ({
                   </svg>
                 </button>
               </div>
-              
+
               {/* Body */}
               <div className="relative p-8 flex-auto">
                 <div className="flex flex-col items-center text-center">
@@ -220,7 +258,7 @@ const RTNavbar = ({
                   </p>
                 </div>
               </div>
-              
+
               {/* Footer */}
               <div className="flex items-center justify-center p-6 border-t border-solid border-slate-100 bg-gray-50/50 gap-4">
                 <button
