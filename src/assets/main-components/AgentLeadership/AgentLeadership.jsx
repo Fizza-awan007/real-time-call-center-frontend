@@ -21,16 +21,13 @@ import {
 
 const PERIOD_OPTIONS = [
   { label: "24 hours", value: "24h" },
-  { label: "15 minutes", value: "15m" },
-  { label: "60 minutes", value: "1h" },
   { label: "7 days", value: "7d" }
   // { label: "30 days", value: "30d" }
 ];
 
 const CALLTOOLS_PERIOD_OPTIONS = [
   { label: "24 hours", value: "24h" },
-  { label: "15 minutes", value: "15m" },
-  { label: "60 minutes", value: "1h" },
+ 
   { label: "7 days", value: "7d" }
 ];
 
