@@ -3,5 +3,7 @@ export const POOL_DASHBOARD_LIST = "/api/pool-dashboard";
 export const DID_POOL_IMPORTS = "/api/did-pool-imports";
 export const AUTH_LOGIN = "/api/auth/login";
 export const AUTH_ME = "/api/auth/me";
+export const AUTH_REGISTER = "/api/auth/register";
 export const CALLTOOLS_SUMMARY = "/api/calltools/summary";
 export const CALLS_LIST = "/api/calls";
+export const CALL_TRANSFERS = "/api/call-transfers";

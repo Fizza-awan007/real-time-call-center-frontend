@@ -1,6 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { Toaster } from "react-hot-toast";
-import { RTLogin, AgentLeaderboard, UploadFile } from "./assets/main-components/index";
+import { RTLogin, AgentLeaderboard, UploadFile, CallTransfers } from "./assets/main-components/index";
 import { PublicRoute, ProtectedRoute } from "./assets/common-components/index";
 
 function App() {
@@ -29,6 +29,14 @@ function App() {
           element={
             <ProtectedRoute>
               <UploadFile />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/transfers"
+          element={
+            <ProtectedRoute>
+              <CallTransfers />
             </ProtectedRoute>
           }
         />
