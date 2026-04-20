@@ -177,9 +177,12 @@ const AgentLeadership = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [loadingAgents, setLoadingAgents] = useState(false);
   const [sortConfig, setSortConfig] = useState({ key: "transfers", order: "desc" });
+  const [callToolsSortTrigger, setCallToolsSortTrigger] = useState(0);
 
   const statsAbortRef = useRef(null);
   const agentsAbortRef = useRef(null);
+  const sortConfigRef = useRef(sortConfig);
+  sortConfigRef.current = sortConfig;
   const gatewayValue = gateway?.value;
   const periodValue = period?.value;
   const groupByValue = groupBy?.value;
@@ -281,9 +284,10 @@ const AgentLeadership = () => {
 
           if (isCallTools) {
             params.set("filter", groupByValue);
-            const apiSortKey = sortConfig.key === "transfers" ? "totalTransfers" : sortConfig.key;
+            const { key: sortKey, order: sortOrder } = sortConfigRef.current;
+            const apiSortKey = sortKey === "transfers" ? "totalTransfers" : sortKey;
             params.set("sort_by", apiSortKey);
-            params.set("sort_order", sortConfig.order);
+            params.set("sort_order", sortOrder);
             const res = await getApiWithAuth(
               `${CALLTOOLS_SUMMARY}?${params.toString()}`,
               controller.signal
@@ -398,15 +402,14 @@ const AgentLeadership = () => {
       clearTimeout(timeoutId);
       if (agentsAbortRef.current) agentsAbortRef.current.abort();
     };
-  }, [currentPage, dateFrom, dateTo, startTime, endTime, period, periodValue, gateway, isCallsApi, isCallTools, groupByValue, sortConfig.key, sortConfig.order]);
+  }, [currentPage, dateFrom, dateTo, startTime, endTime, period, periodValue, gateway, isCallsApi, isCallTools, groupByValue, callToolsSortTrigger]);
 
   const handleSort = (key) => {
-    setSortConfig((prev) =>
-      prev.key === key
-        ? { key, order: prev.order === "asc" ? "desc" : "asc" }
-        : { key, order: "desc" }
-    );
-    setCurrentPage(1);
+    const newOrder = sortConfig.key === key ? (sortConfig.order === "asc" ? "desc" : "asc") : "desc";
+    const next = { key, order: newOrder };
+    sortConfigRef.current = next;
+    setSortConfig(next);
+    if (isCallTools) setCallToolsSortTrigger((n) => n + 1);
   };
 
   const filtered = agents.filter(
