@@ -263,7 +263,7 @@ const AgentLeadership = () => {
         try {
           const params = new URLSearchParams({
             page: String(currentPage),
-            limit: "50"
+            limit: "100"
           });
 
           if (dateFrom) {
@@ -406,7 +406,6 @@ const AgentLeadership = () => {
         ? { key, order: prev.order === "asc" ? "desc" : "asc" }
         : { key, order: "desc" }
     );
-    if (!isCallTools) return;
     setCurrentPage(1);
   };
 
