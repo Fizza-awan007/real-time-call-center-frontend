@@ -39,6 +39,17 @@ const GATEWAY_OPTIONS = [
   { label: "Call Tools", value: "call-tools", code: null }
 ];
 
+const SortIcon = ({ active, order }) => (
+  <span className="inline-flex flex-col gap-[1px]">
+    <svg width="9" height="6" viewBox="0 0 9 6" fill="none">
+      <path d="M4.5 0L9 6H0L4.5 0Z" fill={active && order === "asc" ? "#6366f1" : "#CBD5E1"} />
+    </svg>
+    <svg width="9" height="6" viewBox="0 0 9 6" fill="none">
+      <path d="M4.5 6L0 0H9L4.5 6Z" fill={active && order === "desc" ? "#6366f1" : "#CBD5E1"} />
+    </svg>
+  </span>
+);
+
 const MedalIcon = ({ rank }) => {
   return (
     <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-gray-100 text-[13px] font-semibold text-gray-700">
@@ -165,6 +176,7 @@ const AgentLeadership = () => {
   const [pagination, setPagination] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [loadingAgents, setLoadingAgents] = useState(false);
+  const [sortConfig, setSortConfig] = useState({ key: "transfers", order: "desc" });
 
   const statsAbortRef = useRef(null);
   const agentsAbortRef = useRef(null);
@@ -269,6 +281,9 @@ const AgentLeadership = () => {
 
           if (isCallTools) {
             params.set("filter", groupByValue);
+            const apiSortKey = sortConfig.key === "transfers" ? "totalTransfers" : sortConfig.key;
+            params.set("sort_by", apiSortKey);
+            params.set("sort_order", sortConfig.order);
             const res = await getApiWithAuth(
               `${CALLTOOLS_SUMMARY}?${params.toString()}`,
               controller.signal
@@ -383,13 +398,31 @@ const AgentLeadership = () => {
       clearTimeout(timeoutId);
       if (agentsAbortRef.current) agentsAbortRef.current.abort();
     };
-  }, [currentPage, dateFrom, dateTo, startTime, endTime, period, periodValue, gateway, isCallsApi, isCallTools, groupByValue]);
+  }, [currentPage, dateFrom, dateTo, startTime, endTime, period, periodValue, gateway, isCallsApi, isCallTools, groupByValue, sortConfig.key, sortConfig.order]);
+
+  const handleSort = (key) => {
+    setSortConfig((prev) =>
+      prev.key === key
+        ? { key, order: prev.order === "asc" ? "desc" : "asc" }
+        : { key, order: "desc" }
+    );
+    if (!isCallTools) return;
+    setCurrentPage(1);
+  };
 
   const filtered = agents.filter(
     (a) =>
       a.pool_name?.toLowerCase().includes(search.toLowerCase()) ||
       a.platform?.toLowerCase().includes(search.toLowerCase())
   );
+
+  const sortedAndLimited = isCallTools
+    ? filtered
+    : [...filtered].sort((a, b) => {
+        const aVal = a[sortConfig.key] ?? -Infinity;
+        const bVal = b[sortConfig.key] ?? -Infinity;
+        return sortConfig.order === "asc" ? aVal - bVal : bVal - aVal;
+      });
 
   console.log('Filter Debug:', {
     agentsLength: agents.length,
@@ -858,11 +891,23 @@ const AgentLeadership = () => {
                   <th className="border-b border-gray-100 px-3 py-3 text-left text-[11px] font-semibold uppercase tracking-[0.6px] text-[#45556C] font-urbanist sm:px-7">
                     Platform
                   </th>
-                  <th className="border-b border-gray-100 px-3 py-3 text-center text-[11px] font-semibold uppercase tracking-[0.6px] text-[#45556C] font-urbanist sm:px-7">
-                    Transfers
+                  <th
+                    className="cursor-pointer select-none border-b border-gray-100 px-3 py-3 text-center text-[11px] font-semibold uppercase tracking-[0.6px] text-[#45556C] font-urbanist sm:px-7 hover:bg-gray-50"
+                    onClick={() => handleSort("transfers")}
+                  >
+                    <span className="inline-flex items-center justify-center gap-1.5">
+                      Transfers
+                      <SortIcon active={sortConfig.key === "transfers"} order={sortConfig.order} />
+                    </span>
                   </th>
-                  <th className="border-b border-gray-100 px-3 py-3 text-center text-[11px] font-semibold uppercase tracking-[0.6px] text-[#45556C] font-urbanist sm:px-7">
-                    Transfer Rate
+                  <th
+                    className="cursor-pointer select-none border-b border-gray-100 px-3 py-3 text-center text-[11px] font-semibold uppercase tracking-[0.6px] text-[#45556C] font-urbanist sm:px-7 hover:bg-gray-50"
+                    onClick={() => handleSort("transfer_rate")}
+                  >
+                    <span className="inline-flex items-center justify-center gap-1.5">
+                      Transfer Rate
+                      <SortIcon active={sortConfig.key === "transfer_rate"} order={sortConfig.order} />
+                    </span>
                   </th>
                   <th className="border-b border-gray-100 px-3 py-3 text-center text-[11px] font-semibold uppercase tracking-[0.6px] text-[#45556C] font-urbanist sm:px-7">
                     Total Dials
@@ -870,8 +915,14 @@ const AgentLeadership = () => {
                   <th className="border-b border-gray-100 px-3 py-3 text-center text-[11px] font-semibold uppercase tracking-[0.6px] text-[#45556C] font-urbanist sm:px-7">
                     Connects
                   </th>
-                  <th className="border-b border-gray-100 px-3 py-3 text-center text-[11px] font-semibold uppercase tracking-[0.6px] text-[#45556C] font-urbanist sm:px-7">
-                    Connect Rate
+                  <th
+                    className="cursor-pointer select-none border-b border-gray-100 px-3 py-3 text-center text-[11px] font-semibold uppercase tracking-[0.6px] text-[#45556C] font-urbanist sm:px-7 hover:bg-gray-50"
+                    onClick={() => handleSort("connect_rate")}
+                  >
+                    <span className="inline-flex items-center justify-center gap-1.5">
+                      Connect Rate
+                      <SortIcon active={sortConfig.key === "connect_rate"} order={sortConfig.order} />
+                    </span>
                   </th>
                   <th className="border-b border-gray-100 px-3 py-3 text-center text-[11px] font-semibold uppercase tracking-[0.6px] text-[#45556C] font-urbanist sm:px-7">
                     Avg Duration
@@ -892,7 +943,7 @@ const AgentLeadership = () => {
                       Loading...
                     </td>
                   </tr>
-                ) : filtered.length === 0 ? (
+                ) : sortedAndLimited.length === 0 ? (
                   <tr>
                     <td
                       colSpan={9}
@@ -902,7 +953,7 @@ const AgentLeadership = () => {
                     </td>
                   </tr>
                 ) : (
-                  filtered.map((agent, idx) => {
+                  sortedAndLimited.map((agent, idx) => {
                     const globalRank =
                       (currentPage - 1) * (pagination?.pageSize ?? 100) +
                       idx +
