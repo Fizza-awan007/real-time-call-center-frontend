@@ -11,6 +11,7 @@ const UploadFile = () => {
   const [dragOver, setDragOver] = useState(false);
   const [error, setError] = useState("");
   const [uploading, setUploading] = useState(false);
+  const [uploadResult, setUploadResult] = useState(null);
   const inputRef = useRef(null);
 
   const validate = (f) => {
@@ -52,6 +53,7 @@ const UploadFile = () => {
   const handleRemove = () => {
     setFile(null);
     setError("");
+    setUploadResult(null);
   };
 
   const formatSize = (bytes) => {
@@ -71,7 +73,7 @@ const UploadFile = () => {
     });
     setUploading(false);
     if (res.success) {
-      toast.success("File uploaded successfully!");
+      setUploadResult({ ok: true, data: res.data });
       setFile(null);
     } else {
       const msg = res.data?.error || res.data?.message || "Upload failed. Please try again.";
@@ -170,6 +172,44 @@ const UploadFile = () => {
             >
               {uploading ? "Uploading..." : "Upload"}
             </button>
+          )}
+
+          {uploadResult && (
+            <div className="mt-6 rounded-2xl border border-emerald-200 bg-white px-6 py-5 shadow-sm">
+              <div className="mb-4 flex items-center gap-2">
+                <div className="flex h-7 w-7 items-center justify-center rounded-full bg-emerald-100">
+                  <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                    <path d="M2.5 7l3 3 6-6" stroke="#10b981" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                </div>
+                <span className="text-[15px] font-semibold text-[#1a1d23]">Upload Complete</span>
+              </div>
+
+              <p className="mb-4 rounded-lg bg-gray-50 px-3 py-2 text-[13px] text-[#62748E]">
+                {uploadResult.data?.message}
+              </p>
+
+              <div className="grid grid-cols-2 gap-2">
+                {[
+                  { label: "Inserted", value: uploadResult.data?.inserted_count, color: "text-emerald-600" },
+                  { label: "Skipped", value: uploadResult.data?.skipped_count, color: "text-amber-500" },
+                  { label: "Duplicates", value: uploadResult.data?.duplicate_count, color: "text-orange-500" },
+                  { label: "Existing Duplicates", value: uploadResult.data?.existing_duplicate_count, color: "text-orange-400" },
+                  { label: "File Duplicates", value: uploadResult.data?.file_duplicate_count, color: "text-yellow-500" },
+                  { label: "Invalid Rows", value: uploadResult.data?.invalid_count, color: "text-red-500" },
+                  { label: "Empty Rows", value: uploadResult.data?.empty_row_count, color: "text-gray-400" },
+                ].map(({ label, value, color }) => (
+                  <div key={label} className="flex items-center justify-between rounded-lg border border-gray-100 bg-gray-50 px-3 py-2">
+                    <span className="text-[12px] text-[#62748E]">{label}</span>
+                    <span className={`text-[13px] font-semibold ${color}`}>{value ?? 0}</span>
+                  </div>
+                ))}
+              </div>
+
+              <p className="mt-3 text-right text-[11px] text-[#62748E]">
+                File: <span className="font-medium text-[#1a1d23]">{uploadResult.data?.filename}</span>
+              </p>
+            </div>
           )}
         </div>
       </main>
